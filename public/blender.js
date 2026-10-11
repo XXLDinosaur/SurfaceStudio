@@ -50,7 +50,7 @@
     const panel = document.createElement('section');
     panel.className = 'blender-panel'; panel.id = 'blender-panel';
     panel.innerHTML = `<div class="blender-panel-title"><span><span class="blender-symbol">◉</span> BLENDER LIVE LINK</span><button class="text-button" id="blender-help">连接帮助</button></div><select id="blender-session" aria-label="目标 Blender 窗口" hidden></select><div id="blender-target" class="blender-target" role="status"></div><button class="primary-button" id="send-blender" disabled>${icon('cube')}赋予到 Blender</button><div id="blender-mode-note" class="blender-mode-note"></div><details class="blender-options"><summary>贴图与导入选项</summary><div class="blender-options-body"><label>平铺次数<input id="blender-repeat" type="number" min="0.01" max="100" step="0.25" value="${Number(importOptions.repeat)||1}"></label><label><input id="blender-autoUV" type="checkbox" ${importOptions.autoUV?'checked':''}>无 UV 时自动展开（对象模式）</label><label><input id="blender-ao" type="checkbox" ${importOptions.ao?'checked':''}>连接 AO 环境遮蔽</label><label><input id="blender-bump" type="checkbox" ${importOptions.bump?'checked':''}>使用高度贴图添加凹凸细节</label><label><input id="blender-flipNormalY" type="checkbox" ${importOptions.flipNormalY?'checked':''}>翻转法线绿色通道（DirectX）</label><p>默认使用 OpenGL 法线。凹凸不会改变模型几何。</p></div></details><div id="blender-result" class="blender-result" role="status"></div>`;
-    body.querySelector('.detail-add').insertAdjacentElement('afterend', panel);
+    body.querySelector('#copy-path').insertAdjacentElement('afterend', panel);
     panel.querySelector('#blender-help').onclick = help;
     panel.querySelector('#blender-session').onchange = e => {selectedSession = e.target.value; updateStatus();};
     panel.querySelector('#send-blender').onclick = send;
