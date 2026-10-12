@@ -29,21 +29,6 @@ class WindowControls:
     def window_state(self):
         return {'maximized': self._maximized}
 
-    def configure_corners(self, scale=1.0, smooth=True):
-        from System import Action
-        from window_shape import apply_shape
-        scale = max(0.75, min(4.0, float(scale)))
-        self._corner_style = (scale, bool(smooth))
-        def update(sender=None, event=None):
-            apply_shape(self._window.native, *self._corner_style)
-        def install():
-            if not getattr(self, '_corner_handler', None):
-                self._corner_handler = update
-                self._window.native.SizeChanged += update
-            update()
-        self._window.native.Invoke(Action(install))
-        return True
-
     def start_material_drag(self, filename):
         """Expose a real Windows CF_HDROP file, not a browser image/URL drag."""
         import re
