@@ -86,7 +86,15 @@ python -m venv .venv
 
 ## 打包
 
-后续每次发布须同时提供 SS 与对应 Blender 插件的合集、独立插件安装包及校验文件；合集内附中文启动、插件安装、连接和更新说明，并标明两者版本与 Blender 兼容范围。分发包不得包含个人素材或 `data`。自动检测并安装 Blender 插件尚未实现，计划见 [后续开发计划](ROADMAP.md)。
+后续每次发布须同时提供 SS 与对应 Blender 插件的合集、独立插件安装包及校验文件；合集内附中文启动、插件安装、连接和更新说明，并标明两者版本与 Blender 兼容范围。分发包不得包含个人素材或 `data`。
+
+### 自动安装 Blender 连接
+
+新增 `SurfaceStudio-Setup.exe` 安装器，检测 Blender 后可一次安装 SS、启用连接插件并配置程序路径。常规安装无需单独在 Blender 中安装插件；便携版可手动指定 `blender.exe`。详情与限制见 [安装说明](INSTALLER.md)。安装器首版内置 SS v1.0.1 与插件 v1.0.0；仅新增安装流程，不改变材质管理界面。
+
+先构建 SS EXE，再执行 `./build_installer.ps1 -Python ./.venv/Scripts/python.exe`。输出 `dist/SurfaceStudio-Setup.exe`。安装器只包含显式列出的软件、插件和说明文件，不复制个人数据。
+
+安装测试：`python -m unittest test_installer`；真实 Blender 隔离配置测试：`python test_installer_blender.py "路径/blender.exe"`。后者验证安装、重启启用、更新路径、偏好保留、失败回退与 PBR 功能，不写入真实 Blender 用户配置。
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
