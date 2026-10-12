@@ -163,7 +163,7 @@ class Handler(BaseHTTPRequestHandler):
             body=json.loads(self.rfile.read(length) or '{}')
             endpoint=urlparse(self.path).path
             with LOCK:
-                if endpoint == '/api/blender/apply':
+                if endpoint in ('/api/blender/apply', '/api/blender/drop'):
                     a = ASSETS.get(body.get('asset'))
                     if not a: raise ValueError('材质不存在，请刷新素材库')
                     maps = []
@@ -173,6 +173,8 @@ class Handler(BaseHTTPRequestHandler):
                         maps.append({**m, 'path': str(path)})
                     manifest = {'id': a['id'], 'name': a['name'], 'assetId': a['assetId'],
                                 'root': INDEX['root'], 'folder': a['folder'], 'maps': maps}
+                    if endpoint == '/api/blender/drop':
+                        return self.send(BRIDGE.prepare_drop(manifest, body.get('options', {})))
                     return self.send(BRIDGE.enqueue(body.get('session'), manifest,
                                      body.get('options', {}), body.get('revision')))
                 if endpoint == '/api/state':

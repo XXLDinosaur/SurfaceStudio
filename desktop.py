@@ -29,6 +29,30 @@ class WindowControls:
     def window_state(self):
         return {'maximized': self._maximized}
 
+    def start_material_drag(self, filename):
+        """Expose a real Windows CF_HDROP file, not a browser image/URL drag."""
+        import re
+        from System import Action, Array, String
+        from System.Windows.Forms import DataObject, DragDropEffects, Control, MouseButtons
+        path = Path(filename).resolve()
+        allowed = (ROOT/'data/blender/drops').resolve()
+        if path.parent != allowed or path.suffix != '.ssmat' or not re.fullmatch('[a-f0-9]{32}', path.stem):
+            raise ValueError('无效的材质拖拽文件')
+        if not path.is_file(): raise ValueError('拖拽材质已失效，请重试')
+        result = {'dropped': False}
+        def drag():
+            try:
+                if not (int(Control.MouseButtons) & int(MouseButtons.Left)): return
+                data = DataObject()
+                from System.Windows.Forms import DataFormats
+                data.SetData(DataFormats.FileDrop, Array[String]([str(path)]))
+                result['dropped'] = self._window.native.DoDragDrop(data, DragDropEffects.Copy) == DragDropEffects.Copy
+            except Exception as exc:
+                result['error'] = str(exc)
+        self._window.native.Invoke(Action(drag))
+        if result.get('error'): raise RuntimeError(result['error'])
+        return result
+
     def bounds(self):
         w = self._window
         return {'x': w.x, 'y': w.y, 'width': w.width, 'height': w.height}

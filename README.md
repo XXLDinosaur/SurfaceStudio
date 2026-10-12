@@ -58,6 +58,14 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 ## Blender 联动
 
+### 拖拽赋材质（本地开发版 1.1.0）
+
+Windows 桌面客户端与 Blender 插件均需更新到本版。启用插件并配置 SS 程序路径，在 Blender 对象模式下，按住 SS 的材质球，拖到视口中的网格表面松开。仅给落点模型赋材质，无需预先选中；空白处、锁定选择的对象和不可直接编辑的实例不会应用。支持 Ctrl+Z 撤销。
+
+网页浏览器模式不支持此原生跨应用拖出。编辑模式选中面赋材质仍使用原有“赋予到 Blender”按钮。拖拽沿用当前平铺、AO、法线和自动 UV 选项。插件路径必须指向正在使用的 SS；可以运行新版自动安装器进行配置。
+
+目标赋予、撤销及视口射线检测有自动化测试；完整的跨窗口鼠标手势仍需现场验收，详见 [拖拽验证记录](DRAG-DROP.md)。GitHub 旧版便携包不会自动升级。
+
 支持 Blender 4.2+；开发期间在 4.2.4 LTS 和 5.1.2 验证过，其他版本尚未逐一测试。
 
 1. 从 Release 下载 `surface_studio_bridge.zip`。
@@ -90,7 +98,7 @@ python -m venv .venv
 
 ### 自动安装 Blender 连接
 
-新增 `SurfaceStudio-Setup.exe` 安装器，检测 Blender 后可一次安装 SS、启用连接插件并配置程序路径。常规安装无需单独在 Blender 中安装插件；便携版可手动指定 `blender.exe`。详情与限制见 [安装说明](INSTALLER.md)。安装器首版内置 SS v1.0.1 与插件 v1.0.0；仅新增安装流程，不改变材质管理界面。
+新增 `SurfaceStudio-Setup.exe` 安装器，检测 Blender 后可一次安装 SS、启用连接插件并配置程序路径。常规安装无需单独在 Blender 中安装插件；便携版可手动指定 `blender.exe`。详情与限制见 [安装说明](INSTALLER.md)。安装器当前本地构建内置 SS v1.1.0 与插件 v1.1.0，包含视口拖拽赋材质。
 
 先构建 SS EXE，再执行 `./build_installer.ps1 -Python ./.venv/Scripts/python.exe`。输出 `dist/SurfaceStudio-Setup.exe`。安装器只包含显式列出的软件、插件和说明文件，不复制个人数据。
 

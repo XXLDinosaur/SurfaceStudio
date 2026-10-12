@@ -1,7 +1,7 @@
 bl_info = {
     'name': 'Surface Studio — 本地材质库',
     'author': 'Surface Studio',
-    'version': (1, 0, 0),
+    'version': (1, 1, 0),
     'blender': (4, 2, 0),
     'location': '3D Viewport > Sidebar > Surface Studio',
     'description': '打开 Surface Studio，将本地 PBR 材质一键赋予选中模型或选中的面',
@@ -21,7 +21,7 @@ import uuid
 import bpy
 import bmesh
 from bpy.props import StringProperty
-from bpy.types import AddonPreferences, Operator, Panel
+from bpy.types import AddonPreferences, Operator, Panel, FileHandler
 from bpy.app.handlers import persistent
 
 DEFAULT_EXE = str(Path.home() / 'SurfaceStudio' / 'Surface Studio.exe')
@@ -117,19 +117,27 @@ def disconnect():
     LAST_MESSAGE = '连接已断开'
 
 
-def validate_job(job):
-    if job.get('session') != SESSION:
-        raise ValueError('任务不属于当前 Blender 窗口')
-    if job.get('expires', 0) < time.time():
-        raise ValueError('任务已过期，请重新点击赋予')
-    current = snapshot()
-    if current['revision'] != job.get('revision'):
-        raise ValueError('选中的模型或面已变化，本次未赋予材质。请重新点击赋予。')
-    if current['mode'] not in ('OBJECT', 'EDIT_MESH') or not current['objects']:
-        raise ValueError('请在对象模式或编辑模式选择网格模型')
-    if current['mode'] == 'EDIT_MESH' and not current['selectedFaces']:
-        raise ValueError('请先选中需要赋材质的面')
-    objects = [bpy.context.view_layer.objects[item['name']] for item in current['objects']]
+def validate_job(job, target=None):
+    if target is None:
+        if job.get('session') != SESSION:
+            raise ValueError('任务不属于当前 Blender 窗口')
+        if job.get('expires', 0) < time.time():
+            raise ValueError('任务已过期，请重新点击赋予')
+        current = snapshot()
+        if current['revision'] != job.get('revision'):
+            raise ValueError('选中的模型或面已变化，本次未赋予材质。请重新点击赋予。')
+        if current['mode'] not in ('OBJECT', 'EDIT_MESH') or not current['objects']:
+            raise ValueError('请在对象模式或编辑模式选择网格模型')
+        if current['mode'] == 'EDIT_MESH' and not current['selectedFaces']:
+            raise ValueError('请先选中需要赋材质的面')
+        objects = [bpy.context.view_layer.objects[item['name']] for item in current['objects']]
+    else:
+        if bpy.context.mode != 'OBJECT':
+            raise ValueError('拖拽赋材质请先切换到对象模式；选中面赋材质仍可用侧栏按钮')
+        if target.type != 'MESH' or bpy.context.view_layer.objects.get(target.name) != target:
+            raise ValueError('请拖到当前视口中的网格模型上')
+        current = {'mode': 'OBJECT'}
+        objects = [target]
     for obj in objects:
         if not obj.is_editable or not obj.data.is_editable:
             raise ValueError(f'{obj.name} 是只读链接对象，请先本地化')
@@ -278,8 +286,8 @@ def smart_uv(context, obj):
         context.view_layer.objects.active = active
 
 
-def apply_job(context, job):
-    objects, opts = validate_job(job)
+def apply_job(context, job, target=None):
+    objects, opts = validate_job(job, target)
     editing = context.mode == 'EDIT_MESH'
     material, warnings = build_material(job['material'], opts)
     # Keep unselected linked duplicates untouched. Original material slots are retained.
@@ -386,6 +394,106 @@ def tick():
     return 0.5
 
 
+def read_drop(filename):
+    path = Path(filename).resolve()
+    expected = (executable().parent / 'data/blender/drops').resolve()
+    if path.parent != expected or path.suffix != '.ssmat' or not re.fullmatch('[a-f0-9]{32}', path.stem):
+        raise ValueError('拖拽来源与插件中的 SS 路径不一致，请检查插件程序路径')
+    if path.stat().st_size > 1024 * 1024:
+        raise ValueError('无效的拖拽数据')
+    data = read_json(path)
+    if not isinstance(data, dict) or data.get('app') != 'SurfaceStudio' or data.get('protocol') != 1 or data.get('id') != path.stem:
+        raise ValueError('无法识别的 Surface Studio 拖拽文件')
+    if not isinstance(data.get('expires'), (int, float)) or not time.time() < data['expires'] <= time.time()+301:
+        raise ValueError('拖拽已过期，请从 SS 重新拖出材质')
+    if not isinstance(data.get('material'), dict) or not isinstance(data.get('options'), dict):
+        raise ValueError('拖拽材质缺少有效数据')
+    return path, data
+
+
+def mesh_at_drop(context, x, y):
+    from bpy_extras import view3d_utils
+    if not context.region or context.region.type != 'WINDOW' or context.area.type != 'VIEW_3D':
+        return None
+    region, region3d = context.region, context.region_data
+    if not region3d: return None
+    coord = (x-region.x, y-region.y)
+    if not 0 <= coord[0] < region.width or not 0 <= coord[1] < region.height: return None
+    direction = view3d_utils.region_2d_to_vector_3d(region, region3d, coord)
+    origin = view3d_utils.region_2d_to_origin_3d(region, region3d, coord)
+    graph = context.evaluated_depsgraph_get()
+    for _ in range(64):
+        hit, location, normal, face, obj, matrix = context.scene.ray_cast(graph, origin, direction)
+        if not hit: return None
+        original = obj.original
+        if original.visible_get(view_layer=context.view_layer, viewport=context.space_data):
+            if original.type != 'MESH' or original.hide_select: return None
+            # Collection/geometry-node instances have no independently editable target.
+            if any(abs(matrix[i][j]-original.matrix_world[i][j]) > 1e-5 for i in range(4) for j in range(4)):
+                return None
+            return original
+        origin = location + direction * 0.0001
+    return None
+
+
+class SURFACESTUDIO_OT_drop(Operator):
+    bl_idname = 'surface_studio.drop_material'
+    bl_label = '拖放 Surface Studio 材质'
+    bl_options = {'UNDO'}
+    filepath: StringProperty(subtype='FILE_PATH', options={'SKIP_SAVE', 'HIDDEN'})
+    target_name: StringProperty(options={'SKIP_SAVE', 'HIDDEN'})
+
+    @classmethod
+    def poll(cls, context):
+        return bool(context.area and context.area.type == 'VIEW_3D' and context.region and context.region.type == 'WINDOW')
+
+    def invoke(self, context, event):
+        target = mesh_at_drop(context, event.mouse_x, event.mouse_y)
+        self.target_name = target.name if target else ''
+        return self.execute(context)
+
+    def execute(self, context):
+        global LAST_MESSAGE
+        path = data = None
+        try:
+            path, data = read_drop(self.filepath)
+            result_path = path.parent.parent/'results'/(path.stem+'.json')
+            result_path.parent.mkdir(parents=True, exist_ok=True)
+            previous = read_json(result_path)
+            if previous and previous.get('status') in ('success', 'applying'):
+                raise ValueError('这次拖拽已经处理，请从 SS 重新拖出材质')
+            target = context.view_layer.objects.get(self.target_name)
+            if not target: raise ValueError('未命中可编辑网格；请把材质球拖到模型表面')
+            if BUSY: raise ValueError('Blender 正在处理另一个材质，请稍后再拖拽')
+            atomic_json(result_path, {'id': path.stem, 'status': 'applying', 'updated': time.time(), 'message': '正在赋予拖拽材质…'})
+            result = apply_job(context, data, target=target)
+            result['message'] = f'已将 {data["material"]["name"]} 赋予 {target.name} · Ctrl+Z 可撤销'
+            atomic_json(result_path, {'id': path.stem, **result})
+            LAST_MESSAGE = result['message']
+            self.report({'INFO'}, LAST_MESSAGE)
+            refresh_panels()
+            return {'FINISHED'}
+        except Exception as exc:
+            if path and data:
+                result_path = path.parent.parent/'results'/(path.stem+'.json')
+                previous = read_json(result_path)
+                if not previous or previous.get('status') != 'success':
+                    atomic_json(result_path, {'id': path.stem, 'status': 'error', 'message': str(exc)})
+            self.report({'WARNING'}, str(exc))
+            return {'CANCELLED'}
+
+
+class SURFACESTUDIO_FH_material(FileHandler):
+    bl_idname = 'SURFACESTUDIO_FH_material'
+    bl_label = 'Surface Studio 材质'
+    bl_import_operator = 'surface_studio.drop_material'
+    bl_file_extensions = '.ssmat'
+
+    @classmethod
+    def poll_drop(cls, context):
+        return bool(context.area and context.area.type == 'VIEW_3D' and context.region and context.region.type == 'WINDOW')
+
+
 class SURFACESTUDIO_Preferences(AddonPreferences):
     bl_idname = __name__
     executable_path: StringProperty(name='Surface Studio 程序', subtype='FILE_PATH', default=DEFAULT_EXE)
@@ -460,7 +568,7 @@ def on_load(_):
 
 
 CLASSES = (SURFACESTUDIO_Preferences, SURFACESTUDIO_OT_apply, SURFACESTUDIO_OT_open,
-           SURFACESTUDIO_OT_connect, SURFACESTUDIO_PT_panel)
+           SURFACESTUDIO_OT_connect, SURFACESTUDIO_PT_panel, SURFACESTUDIO_OT_drop, SURFACESTUDIO_FH_material)
 
 
 def register():

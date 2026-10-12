@@ -10,7 +10,7 @@ from pathlib import Path
 class BlenderBridge:
     def __init__(self, root):
         self.root = Path(root)
-        for name in ('sessions', 'requests', 'results'):
+        for name in ('sessions', 'requests', 'results', 'drops'):
             (self.root / name).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
@@ -44,6 +44,26 @@ class BlenderBridge:
                 continue
             result.append(session)
         return sorted(result, key=lambda s: s.get('heartbeat', 0), reverse=True)
+
+    def prepare_drop(self, manifest, options):
+        if not isinstance(options, dict): raise ValueError('无效导入选项')
+        repeat = float(options.get('repeat', 1))
+        if not math.isfinite(repeat) or not .01 <= repeat <= 100:
+            raise ValueError('贴图平铺次数应在 0.01 到 100 之间')
+        opts = {'repeat': repeat, **{k: bool(options.get(k, default)) for k, default in
+                                    [('autoUV', True), ('ao', True), ('bump', False), ('flipNormalY', False)]}}
+        now = time.time()
+        for old in (self.root/'drops').glob('*.ssmat'):
+            if self.valid_id(old.stem) and now-old.stat().st_mtime > 86400:
+                old.unlink(missing_ok=True)
+        ident = secrets.token_hex(16)
+        path = self.root/'drops'/(ident+'.ssmat')
+        self.write(path, {'app': 'SurfaceStudio', 'protocol': 1, 'id': ident,
+                          'created': now, 'expires': now+300, 'material': manifest, 'options': opts})
+        self.write(self.root/'results'/(ident+'.json'),
+                   {'id': ident, 'status': 'pending', 'created': now, 'expires': now+300,
+                    'message': '等待拖放到 Blender 模型…'})
+        return {'id': ident, 'path': str(path.resolve())}
 
     def enqueue(self, session_id, manifest, options, expected_revision):
         if not self.valid_id(session_id):
@@ -89,7 +109,7 @@ class BlenderBridge:
         result = self.read(self.root / 'results' / (ident + '.json'))
         if not result:
             raise ValueError('导入任务不存在')
-        if result.get('status') == 'pending' and time.time() - result.get('created', 0) > 35:
+        if result.get('status') == 'pending' and time.time() > result.get('expires', result.get('created', 0)+35):
             return {**result, 'status': 'error', 'message': 'Blender 未及时接收。请确认插件已连接后重试。'}
         if result.get('status') == 'applying' and time.time() - result.get('updated', 0) > 180:
             return {**result, 'status': 'unknown', 'message': 'Blender 暂未返回结果，请先在 Blender 中检查材质；确认后再重试。'}

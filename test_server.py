@@ -45,6 +45,19 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual({m['channel'] for m in a['maps']},{'Albedo','Normal'})
         self.assertTrue(a['meta']['tileable'])
 
+    def test_native_drag_manifest_uses_validated_library_paths(self):
+        with self.request('/api/blender/drop', {'asset': self.asset['id'], 'options': {'repeat': 2}}) as response:
+            prepared=json.load(response)
+        path=Path(prepared['path'])
+        self.assertEqual(path.parent, (app.DATA/'blender/drops').resolve())
+        descriptor=json.loads(path.read_text(encoding='utf-8'))
+        self.assertEqual(descriptor['options']['repeat'], 2)
+        self.assertEqual(descriptor['material']['id'], self.asset['id'])
+        self.assertTrue(all(Path(m['path']).is_file() for m in descriptor['material']['maps']))
+        with self.assertRaises(HTTPError) as error:
+            self.request('/api/blender/drop', {'asset': self.asset['id']}, token=False)
+        self.assertEqual(error.exception.code, 403)
+
     def test_transparent_thumbnail_and_cache(self):
         with self.request('/api/image?id='+self.asset['id']+'&file=material_Preview.png&size=96') as r:
             image=Image.open(io.BytesIO(r.read()))

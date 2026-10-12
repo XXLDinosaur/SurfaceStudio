@@ -9,7 +9,7 @@
   connection.innerHTML = '<span class="blender-dot"></span>Blender <span class="connection-caption">未连接</span>';
   document.querySelector('.topbar-right').prepend(connection);
   function help() {
-    modal('在 Blender 中使用你的材质库', `<p class="modal-description">先在 Blender 中选中模型，再打开材质库。点击材质详情中的「赋予到 Blender」，即可自动建立并连接 PBR 材质。</p><ol class="bridge-steps"><li>Blender 的 3D 视图中按 <b>N</b> 打开侧栏。</li><li>选择 <b>Surface Studio</b> 标签，点击「打开材质库」。</li><li>回到这里选材质，检查目标模型，然后点击「赋予到 Blender」。</li></ol><div class="bridge-help-note">对象模式会覆盖选中模型各面的材质分配；编辑模式只作用于选中的面。原材质仍保留在材质槽，Blender 中可按 Ctrl + Z 撤销。</div><p class="form-note">没有 Surface Studio 标签？安装软件目录中的 surface_studio_bridge.zip：编辑 → 偏好设置 → 插件 → 从磁盘安装，然后启用 Surface Studio。兼容 Blender 4.2 及以上版本。</p><div class="modal-actions"><button class="primary-button" id="bridge-help-done">知道了</button></div>`, 'BLENDER LIVE LINK');
+    modal('在 Blender 中使用你的材质库', `<p class="modal-description">在 Windows 桌面客户端按住材质球，拖到 Blender 视口的模型表面松开，即可给落点模型赋材质，无需预先选中。需要插件 1.1.0+ 和对象模式。也可选中模型后点击「赋予到 Blender」。</p><ol class="bridge-steps"><li>Blender 的 3D 视图中按 <b>N</b> 打开侧栏。</li><li>选择 <b>Surface Studio</b> 标签，点击「打开材质库」。</li><li>回到这里选材质，检查目标模型，然后点击「赋予到 Blender」。</li></ol><div class="bridge-help-note">对象模式会覆盖选中模型各面的材质分配；编辑模式只作用于选中的面。原材质仍保留在材质槽，Blender 中可按 Ctrl + Z 撤销。</div><p class="form-note">没有 Surface Studio 标签？安装软件目录中的 surface_studio_bridge.zip：编辑 → 偏好设置 → 插件 → 从磁盘安装，然后启用 Surface Studio。兼容 Blender 4.2 及以上版本。</p><div class="modal-actions"><button class="primary-button" id="bridge-help-done">知道了</button></div>`, 'BLENDER LIVE LINK');
     document.querySelector('#bridge-help-done').onclick = () => document.querySelector('#modal').close();
   }
   connection.onclick = help;
