@@ -24,7 +24,8 @@ class WindowControls:
         return self._maximized
 
     def close(self):
-        self._window.destroy()
+        # Preserve the bridge and the same window for the next launch.
+        self._window.hide()
 
     def window_state(self):
         return {'maximized': self._maximized}
@@ -77,7 +78,7 @@ class WindowControls:
         except Exception:
             pass
 
-def open_window():
+def open_window(instance):
     import webview
     api = WindowControls()
     webview.settings['DRAG_REGION_DIRECT_TARGET_ONLY'] = True
@@ -90,14 +91,55 @@ def open_window():
     api._window = window
     window.events.maximized += lambda: api._state_changed(True)
     window.events.restored += lambda: api._state_changed(False)
-    webview.start(gui='edgechromium', private_mode=False, storage_path=str(ROOT/'data/webview-profile'))
+    stopped = threading.Event()
+    activation_threads = []
+    def watch_activation():
+        activation_threads.append(threading.current_thread())
+        from System import Action
+        from System.Windows.Forms import FormWindowState
+        while not stopped.is_set() and not window.events.shown.is_set():
+            window.events.shown.wait(0.25)
+        def show():
+            form = window.native
+            form.Show()
+            if form.WindowState == FormWindowState.Minimized:
+                form.WindowState = FormWindowState.Normal
+            form.BringToFront()
+            form.Activate()
+        while not stopped.is_set():
+            if instance.wait(250) and not stopped.is_set():
+                try: window.native.Invoke(Action(show))
+                except Exception:
+                    if not stopped.is_set(): raise
+    window.events.closed += lambda: stopped.set()
+    try:
+        webview.start(watch_activation, gui='edgechromium', private_mode=False, storage_path=str(ROOT/'data/webview-profile'))
+    finally:
+        stopped.set()
+        for thread in activation_threads:
+            thread.join(timeout=2)
 
 def main():
+    from single_instance import DesktopInstance
+    instance = DesktopInstance()
+    try:
+        if not instance.primary:
+            instance.activate()
+            return
+        run_primary(instance)
+    finally:
+        instance.close()
+
+
+def run_primary(instance):
+    healthy = False
     try:
         with urlopen(URL+'/api/health',timeout=2) as response:
-            if json.load(response).get('app')=='Surface Studio':
-                open_window(); return
+            healthy = json.load(response).get('app')=='Surface Studio'
     except Exception: pass
+    if healthy:
+        open_window(instance)
+        return
     import server
     saved=server.read_json(server.DATA/'index.json',None)
     if saved and saved.get('root')==server.CONFIG['root']:
@@ -105,9 +147,13 @@ def main():
         server.ASSETS={a['id']:a for a in saved['assets']}
     else: server.scan()
     http=server.ThreadingHTTPServer(('127.0.0.1',47831),server.Handler)
-    # Keep the local service available to the Blender bridge after closing the window.
-    threading.Thread(target=http.serve_forever,daemon=False).start()
-    open_window()
+    # Hiding the desktop keeps the bridge alive; exiting its GUI releases ownership.
+    threading.Thread(target=http.serve_forever,daemon=True).start()
+    try:
+        open_window(instance)
+    finally:
+        http.shutdown()
+        http.server_close()
 
 if __name__=='__main__':
     try: main()
