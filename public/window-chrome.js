@@ -5,6 +5,14 @@
     if (mounted || !window.pywebview?.api?.window_state) return;
     mounted = true;
     document.documentElement.classList.add('native-desktop');
+    let cornerScale;
+    function syncCorners(){
+      if(cornerScale===window.devicePixelRatio)return;
+      cornerScale=window.devicePixelRatio;
+      window.pywebview.api.configure_corners?.(cornerScale,CSS.supports('corner-shape','superellipse(1.5)')).catch(()=>{});
+    }
+    syncCorners();
+    window.addEventListener('resize',syncCorners);
     const top = document.querySelector('.topbar');
     top.classList.add('pywebview-drag-region');
     document.querySelector('.breadcrumb').classList.add('pywebview-drag-region');
