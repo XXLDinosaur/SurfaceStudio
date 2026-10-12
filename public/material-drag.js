@@ -1,5 +1,11 @@
 /* Windows native drag-out; Blender's file handler resolves the hovered mesh. */
 (() => {
+  // The library is a drag source, never a file/URL drop destination.
+  // Prevent WebView2's default navigation or external browser launch.
+  for(const name of ['dragenter','dragover','drop'])document.addEventListener(name,e=>{
+    e.preventDefault();e.stopPropagation();
+    if(e.dataTransfer)e.dataTransfer.dropEffect='none';
+  },true);
   let candidate=null, dragging=false, suppressClickUntil=0, cached=null;
   function options(){try{return JSON.parse(localStorage.getItem('surface-blender-options')||'{}')}catch{return {}}}
   function prepare(id){

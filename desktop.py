@@ -46,7 +46,13 @@ class WindowControls:
                 data = DataObject()
                 from System.Windows.Forms import DataFormats
                 data.SetData(DataFormats.FileDrop, Array[String]([str(path)]))
-                result['dropped'] = self._window.native.DoDragDrop(data, DragDropEffects.Copy) == DragDropEffects.Copy
+                from material_drag import install_drop_guard
+                form = self._window.native
+                guard = install_drop_guard(form)
+                try:
+                    result['dropped'] = form.DoDragDrop(data, DragDropEffects.Copy) == DragDropEffects.Copy
+                finally:
+                    form.QueryContinueDrag -= guard
             except Exception as exc:
                 result['error'] = str(exc)
         self._window.native.Invoke(Action(drag))

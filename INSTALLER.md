@@ -1,6 +1,6 @@
 # Surface Studio 安装与 Blender 自动连接
 
-当前本地构建：SS 1.1.0 + Blender 插件 1.1.0。更新后支持将材质球从 Windows 桌面客户端拖到 Blender 视口中的网格上；需要对象模式，可 Ctrl+Z 撤销。只更新 EXE 不更新插件，无法使用拖放；本安装器会一起更新。
+当前本地构建：SS 1.1.1 + Blender 插件 1.1.0。更新后支持将材质球从 Windows 桌面客户端拖到 Blender 视口中的网格上；需要对象模式，可 Ctrl+Z 撤销。只更新 EXE 不更新插件，无法使用拖放；本安装器会一起更新。
 
 本版已在 Blender 4.2.4 LTS 完成用户手动跨窗口拖放验收；目标模型赋予、撤销和视口落点检测已做分项测试。其他版本完整手势尚未逐一手测。网页访问不支持原生拖出。
 
@@ -26,3 +26,5 @@
 需要 Windows 10 / 11 x64 和 Microsoft Edge WebView2 Runtime；无需安装 Python。WebView2 下载：https://developer.microsoft.com/microsoft-edge/webview2/ 。本安装器不包含 WebView2 或材质资源。
 
 安装器只配置当前 Windows 用户。它不更改 Blender 程序文件、不打开或保存用户工程，也不会自动把贴图打包进 blend。已启用的其他 Blender 插件在后台验证时仍会随 Blender 正常加载。
+
+1.1.1 修复：拖到 Blender 以外的位置松开会取消，禁止 SS 网页接收拖放并跳转。插件版本仍为 1.1.0。
