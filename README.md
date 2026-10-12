@@ -10,6 +10,8 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 Windows 便携包。GitHub 的 Download ZIP 是源码，不是安装包。
 
+推荐下载 **SurfaceStudio-v1.0.1-Windows-x64-with-Blender.zip**：包含 SS、配套 `surface_studio_bridge.zip` 和中文安装使用说明。完整解压合集后，按照“先看这里-安装与使用说明.txt”操作；其中的插件 ZIP 保持压缩状态，在 Blender 中“从磁盘安装”。发布页也提供软件包和插件的独立下载。
+
 1. 完整解压到可写目录，双击 `Surface Studio.exe`。
 2. 在左下角 **材质库设置** 选择自己的素材目录，保存并扫描。
 3. 开始搜索和浏览；程序包不包含材质贴图。
@@ -83,6 +85,8 @@ python -m venv .venv
 只开发网页界面时运行 `python server.py`，浏览器访问 `http://127.0.0.1:47831`。浏览器模式不显示原生窗口按钮，无边框功能由 `desktop.py` 提供。
 
 ## 打包
+
+后续每次发布须同时提供 SS 与对应 Blender 插件的合集、独立插件安装包及校验文件；合集内附中文启动、插件安装、连接和更新说明，并标明两者版本与 Blender 兼容范围。分发包不得包含个人素材或 `data`。自动检测并安装 Blender 插件尚未实现，计划见 [后续开发计划](ROADMAP.md)。
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt

@@ -10,7 +10,7 @@
 
 下载 **SurfaceStudio-v1.0.1-Windows-x64.zip**，完整解压即可运行。已有用户先退出 SS 及后台进程，再用新版 `Surface Studio.exe` 替换旧程序，保留原 `data` 文件夹，以保留素材库路径、收藏、集合与设置。
 
-本次只更新 SS 软件，Blender 连接插件无需重装；首次使用可从 v1.0.0 发布页下载插件。便携包不包含材质资源或个人数据。`SHA256SUMS.txt` 提供软件包校验值。
+2026-10-12 补充发布：推荐下载 **SurfaceStudio-v1.0.1-Windows-x64-with-Blender.zip**，包含 SS v1.0.1、Blender 连接插件 v1.0.0 和中文安装使用说明。当前发布页同时提供独立的 `surface_studio_bridge.zip`。插件支持 Blender 4.2+，本次插件代码未变更，已安装的用户无需重装。合集不包含材质资源或个人数据；`SHA256SUMS-with-Blender.txt` 提供合集和插件校验值。
 
 ## 验证范围
 
