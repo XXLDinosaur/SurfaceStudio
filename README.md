@@ -8,21 +8,23 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 ## 下载与启动
 
-从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 Windows 便携包。GitHub 的 Download ZIP 是源码，不是安装包。
+从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.1.4-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
 
-推荐下载 **SurfaceStudio-v1.0.1-Windows-x64-with-Blender.zip**：包含 SS、配套 `surface_studio_bridge.zip` 和中文安装使用说明。完整解压合集后，按照“先看这里-安装与使用说明.txt”操作；其中的插件 ZIP 保持压缩状态，在 Blender 中“从磁盘安装”。发布页也提供软件包和插件的独立下载。
+合集包含 **SS 1.1.4 自动安装器、Blender 连接插件 1.1.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
 
-1. 完整解压到可写目录，双击 `Surface Studio.exe`。
-2. 在左下角 **材质库设置** 选择自己的素材目录，保存并扫描。
-3. 开始搜索和浏览；程序包不包含材质贴图。
+1. 完整解压合集，运行 `SurfaceStudio-Setup.exe`。
+2. 选择 SS 安装目录，勾选检测到的 Blender 版本。安装器会安装并启用配套插件、配置 SS 路径。
+3. 打开 SS，在 **材质库设置** 中选择自己的素材目录并扫描。
 
-要求 Windows 10 / 11 x64 和 Microsoft Edge WebView2 Runtime。便携包内置 Python 环境，无需另外安装 Python。WebView2 可从 [Microsoft 官方页面](https://developer.microsoft.com/microsoft-edge/webview2/) 获取。
+要求 Windows 10 / 11 x64 和 Microsoft Edge WebView2 Runtime。自动安装支持已验证的 Blender **4.2、4.3、5.1、5.2 正式版系列**；自定义或便携安装可手动选择 `blender.exe`。其他版本暂不自动安装。WebView2 可从 [Microsoft 官方页面](https://developer.microsoft.com/microsoft-edge/webview2/) 获取。
 
-> 关闭窗口后，本地服务继续在后台运行，供 Blender 联动使用。更新 EXE 前，先退出任务管理器中的 Surface Studio.exe 后台进程。保留原 `data` 目录，不要用空配置覆盖已有收藏和设置。
+**已有用户更新**：先关闭 Blender，并退出旧 SS 后台进程，再运行安装器，选择原 SS 目录。保留 `data` 文件夹；安装器会保留数据并备份旧程序和插件设置。详见 [安装说明](INSTALLER.md)。
+
+**单实例**：重复双击只唤起现有窗口。点击右上角关闭按钮会隐藏窗口并保留后台 Blender 连接，再次启动恢复同一个窗口。
 
 ## 功能
 
-**v1.0.1 更新**：滚动接近底部自动加载更多材质；“复制文件夹路径”移到详情中“添加到集合”下方。完整记录见 [更新日志](CHANGELOG.md)。
+**v1.1.4 更新**：自动检测并安装 Blender 插件；拖动材质球到 Blender 模型上赋材质；拖到其他程序时取消；重复启动只唤起已有窗口。完整记录见 [更新日志](CHANGELOG.md)。
 
 | 功能 | 说明 |
 | --- | --- |
@@ -58,15 +60,15 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 ## Blender 联动
 
-### 拖拽赋材质（本地开发版 1.1.0）
+### 拖拽赋材质（SS 1.1.4 + 插件 1.1.0）
 
-Windows 桌面客户端与 Blender 插件均需更新到本版。启用插件并配置 SS 程序路径，在 Blender 对象模式下，按住 SS 的材质球，拖到视口中的网格表面松开。仅给落点模型赋材质，无需预先选中；空白处、锁定选择的对象和不可直接编辑的实例不会应用。支持 Ctrl+Z 撤销。
+Windows 桌面客户端和配套 Blender 插件都需要更新。启用插件并配置 SS 程序路径，在 Blender 对象模式下，按住 SS 的材质球，拖到视口中的网格表面松开。仅给落点模型赋材质，无需预先选中；空白处、锁定选择的对象和不可直接编辑的实例不会应用。支持 Ctrl+Z 撤销。
 
 网页浏览器模式不支持此原生跨应用拖出。编辑模式选中面赋材质仍使用原有“赋予到 Blender”按钮。拖拽沿用当前平铺、AO、法线和自动 UV 选项。插件路径必须指向正在使用的 SS；可以运行新版自动安装器进行配置。
 
 目标赋予、撤销及视口射线检测有自动化测试；完整的跨窗口鼠标手势已通过 Blender 4.2.4 LTS 用户手动验收，详见 [拖拽验证记录](DRAG-DROP.md)。GitHub 旧版便携包不会自动升级。
 
-支持 Blender 4.2+；开发期间在 4.2.4 LTS 和 5.1.2 验证过，其他版本尚未逐一测试。
+安装与插件功能已在 Blender 4.2.4、4.2.9、4.3.0、5.1.2、5.2.0 验证。完整跨窗口拖放由用户在 4.2.4 LTS 手动验收；其他版本尚未逐一手测完整鼠标操作。以下为不使用自动安装器时的手动安装方法。
 
 1. 从 Release 下载 `surface_studio_bridge.zip`。
 2. Blender → 编辑 → 偏好设置 → 插件 → 从磁盘安装，选择 ZIP 并启用。
@@ -115,7 +117,7 @@ EXE 输出到 `dist/Surface Studio.exe`，插件输出为 `surface_studio_bridge
 ## 测试
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest test_server test_bridge
+.\.venv\Scripts\python.exe -m unittest test_server test_bridge test_installer test_drag test_material_drag test_single_instance
 & '你的Blender安装目录\blender.exe' --background --factory-startup --python-exit-code 1 --python test_blender.py
 ```
 
