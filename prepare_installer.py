@@ -12,6 +12,7 @@ if not (root/'dist/Surface Studio.exe').is_file():
 shutil.copy2(root/'dist/Surface Studio.exe', payload/'Surface Studio.exe')
 shutil.copy2(root/'surface_studio_bridge.zip', payload/'surface_studio_bridge.zip')
 shutil.copy2(root/'INSTALLER.md', payload/'安装与使用说明.txt')
-allowed = {'Surface Studio.exe', 'surface_studio_bridge.zip', '安装与使用说明.txt'}
+shutil.copy2(root/'LICENSE', payload/'LICENSE')
+allowed = {'Surface Studio.exe', 'surface_studio_bridge.zip', '安装与使用说明.txt', 'LICENSE'}
 assert {p.name for p in payload.iterdir()} == allowed, 'Payload contains unexpected files'
 print('Prepared clean installer payload')

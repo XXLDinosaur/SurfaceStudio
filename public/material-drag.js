@@ -17,6 +17,7 @@
     return cached.prepared;
   }
   function assetAt(target){
+    if(document.body.classList.contains('bulk-mode'))return null;
     if(target.closest('button,input,select,a'))return null;
     const image=target.closest('.card-image');
     if(image)return image.closest('[data-asset]')?.dataset.asset;
@@ -29,7 +30,7 @@
     const id=assetAt(e.target);if(id){prepare(id);const area=e.target.closest('.card-image,#detail-preview');if(area)area.title='按住拖到 Blender 模型上（对象模式）'}
   });
   document.addEventListener('pointerdown',e=>{
-    if(e.button!==0||!window.pywebview?.api?.start_material_drag)return;
+    if(e.ctrlKey||e.shiftKey||e.metaKey||e.button!==0||!window.pywebview?.api?.start_material_drag)return;
     const id=assetAt(e.target);if(id){
       const prepared=prepare(id);
       candidate={id,x:e.clientX,y:e.clientY,prepared};

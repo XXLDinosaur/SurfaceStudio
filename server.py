@@ -7,6 +7,8 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs, unquote
 from PIL import Image, ImageOps
 from blender_bridge import BlenderBridge
+import organizer
+from types import SimpleNamespace
 
 BASE = Path(__file__).resolve().parent
 DATA = Path(os.environ.get('SURFACE_STUDIO_DATA', str(BASE / 'data')))
@@ -99,6 +101,8 @@ def edit_category(body):
     data[key] = edits
     save_json(DATA / 'categories.json', data)
     return {'ok': True}
+
+organizer.recover(SimpleNamespace(**globals()))
 
 def scan():
     global INDEX, ASSETS, SCANNING, SCAN_ERROR
@@ -218,10 +222,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({'error':'无效来源'},status=403)
         try:
             length=int(self.headers.get('Content-Length','0'))
-            if length>1024*1024: raise ValueError('请求过大')
+            if length>16*1024*1024: raise ValueError('请求过大')
             body=json.loads(self.rfile.read(length) or '{}')
             endpoint=urlparse(self.path).path
             with LOCK:
+                organizer.recover(SimpleNamespace(**globals()))
+                if endpoint == '/api/organize': return self.send(organizer.handle(SimpleNamespace(**globals()),body))
                 if endpoint == '/api/categories': return self.send(edit_category(body))
                 if endpoint in ('/api/blender/apply', '/api/blender/drop'):
                     a = ASSETS.get(body.get('asset'))

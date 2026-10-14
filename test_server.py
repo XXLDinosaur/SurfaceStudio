@@ -100,6 +100,70 @@ class LibraryTests(unittest.TestCase):
         finally:
             path.unlink(missing_ok=True)
 
+    def test_bulk_and_portable_backup_restore(self):
+        import copy
+        original=copy.deepcopy(app.STATE)
+        app.STATE.update({'favorites':[],'collections':[{'id':'bulk-test','name':'测试','ids':[]}],'recent':[]})
+        path=app.DATA/'categories.json';before=path.read_bytes() if path.exists() else None
+        ident=self.asset['id']
+        try:
+            for body in [{'action':'favorite','ids':[ident,ident]},
+                         {'action':'collection','ids':[ident],'collection':'bulk-test'},
+                         {'action':'category','ids':[ident],'category':'Rock'}]:
+                with self.request('/api/organize',body) as r:self.assertEqual(json.load(r)['count'],1)
+            with self.request('/api/organize',{'action':'export'}) as r: backup_path=Path(json.load(r)['path'])
+            backup=json.loads(backup_path.read_text(encoding='utf-8'))
+            self.assertEqual(backup['state']['favorites'],[ident])
+            self.assertEqual(backup['categories']['assignments'][ident],'Rock')
+            backup['root']='Z:/different/computer'
+            app.STATE.update({'favorites':[],'collections':[],'recent':[]});path.unlink(missing_ok=True)
+            with self.request('/api/organize',{'action':'preview','backup':backup}) as r:self.assertEqual(json.load(r)['matched'],1)
+            self.assertEqual(app.STATE['favorites'],[])
+            with self.request('/api/organize',{'action':'restore','backup':backup}):pass
+            self.assertEqual(app.STATE['favorites'],[ident])
+            self.assertEqual(app.categorized_library()['assets'][0]['category'],'Rock')
+            with self.request('/api/organize',{'action':'restore','backup':backup}):pass
+            self.assertEqual(len(app.STATE['collections']),1)
+            with self.request('/api/organize',{'action':'category','ids':[ident],'category':'Soil'}):pass
+            with self.request('/api/organize',{'action':'restore','backup':backup}) as r:self.assertEqual(json.load(r)['conflicts'],1)
+            self.assertEqual(app.categorized_library()['assets'][0]['category'],'Soil')
+            saved=copy.deepcopy(app.STATE)
+            for body in [{'action':'favorite','ids':[ident,'missing']},{'action':'restore','backup':{}},
+                         {'action':'collection','ids':[ident],'collection':'missing'}]:
+                with self.assertRaises(HTTPError):self.request('/api/organize',body)
+                self.assertEqual(app.STATE,saved)
+            with self.assertRaises(HTTPError):self.request('/api/organize',{'action':'export'},token=False)
+            missing=copy.deepcopy(backup);missing['materials'][ident]='missing-folder'
+            with self.request('/api/organize',{'action':'preview','backup':missing}) as r:self.assertEqual(json.load(r)['missing'],1)
+        finally:
+            app.STATE.clear();app.STATE.update(original)
+            app.save_json(app.DATA/'state.json',original)
+            if before is None:path.unlink(missing_ok=True)
+            else:path.write_bytes(before)
+
+    def test_organization_journal_recovers_interrupted_write(self):
+        import copy
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        original=copy.deepcopy(app.STATE)
+        path=app.DATA/'categories.json';before=path.read_bytes() if path.exists() else None
+        target=copy.deepcopy(original);target['favorites']=[self.asset['id']]
+        try:
+            real=app.save_json
+            def fail_state(path,value):
+                if path.name=='state.json':raise OSError('simulated interruption')
+                real(path,value)
+            env=SimpleNamespace(**vars(app));env.save_json=fail_state
+            with self.assertRaises(OSError):app.organizer.commit(env,target,{})
+            self.assertTrue((app.DATA/'organization-pending.json').exists())
+            app.organizer.recover(SimpleNamespace(**vars(app)))
+            self.assertEqual(app.STATE,target)
+            self.assertFalse((app.DATA/'organization-pending.json').exists())
+        finally:
+            app.STATE.clear();app.STATE.update(original);app.save_json(app.DATA/'state.json',original)
+            if before is None:path.unlink(missing_ok=True)
+            else:path.write_bytes(before)
+
     def test_native_drag_manifest_uses_validated_library_paths(self):
         with self.request('/api/blender/drop', {'asset': self.asset['id'], 'options': {'repeat': 2}}) as response:
             prepared=json.load(response)

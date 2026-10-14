@@ -219,7 +219,7 @@ def install_application(payload, destination):
         os.replace(temporary, executable)
     finally:
         temporary.unlink(missing_ok=True)
-    for name in ['安装与使用说明.txt', 'surface_studio_bridge.zip']:
+    for name in ['安装与使用说明.txt', 'surface_studio_bridge.zip', 'LICENSE']:
         if (payload/name).is_file(): shutil.copy2(payload/name, destination/name)
     return executable
 
