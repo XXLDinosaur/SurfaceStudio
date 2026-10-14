@@ -24,7 +24,7 @@ class Setup:
 
     def defaults(self):
         destination = Path(os.environ.get('LOCALAPPDATA', str(Path.home())))/'Programs/SurfaceStudio'
-        return {'destination': str(destination), 'ss_version': '1.2.0', 'addon_version': '1.1.0'}
+        return {'destination': str(destination), 'ss_version': '1.2.1', 'addon_version': '1.1.0'}
 
     def scan(self):
         if not self._guard.acquire(blocking=False): return {'error': '正在处理，请稍候'}
@@ -95,7 +95,7 @@ class Setup:
             self._status['stage'] = '安装完成' if all(r['ok'] for r in results) else 'SS 已安装，部分项目需要处理后重试'
             report = executable.parent/'data/installer-report.json'
             report.parent.mkdir(parents=True, exist_ok=True)
-            report.write_text(json.dumps({'software': '1.2.0', 'addon': '1.1.0', 'results': results}, ensure_ascii=False, indent=2), encoding='utf-8')
+            report.write_text(json.dumps({'software': '1.2.1', 'addon': '1.1.0', 'results': results}, ensure_ascii=False, indent=2), encoding='utf-8')
             return {'results': results, 'installed': str(executable)}
         except Exception as exc:
             self._status['stage'] = '安装未完成'

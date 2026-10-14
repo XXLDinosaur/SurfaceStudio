@@ -78,6 +78,28 @@ class LibraryTests(unittest.TestCase):
         finally:
             path.unlink(missing_ok=True)
 
+    def test_rename_categories_preserves_ids_and_scan(self):
+        path=app.DATA/'categories.json'
+        try:
+            with self.request('/api/categories', {'action':'rename','category':'Concrete','name':'我的混凝土'}): pass
+            app.scan()
+            with self.request('/api/library') as r: library=json.load(r)
+            self.assertEqual(library['assets'][0]['category'],'Concrete')
+            self.assertEqual(library['assets'][0]['categoryZh'],'我的混凝土')
+            self.assertEqual(library['categories'][0]['name'],'我的混凝土')
+            with self.request('/api/categories', {'action':'create','name':'测试分类','asset':self.asset['id']}): pass
+            with self.request('/api/library') as r: target=json.load(r)['assets'][0]['category']
+            with self.request('/api/categories', {'action':'rename','category':target,'name':'改名分类'}): pass
+            app.scan()
+            with self.request('/api/library') as r: material=json.load(r)['assets'][0]
+            self.assertEqual(material['category'],target)
+            self.assertEqual(material['categoryZh'],'改名分类')
+            for category,name in [(target,'我的混凝土'),('missing','新名称'),(target,' '),(target,'x'*41)]:
+                with self.assertRaises(HTTPError): self.request('/api/categories',{'action':'rename','category':category,'name':name})
+            with self.request('/api/categories', {'action':'rename','category':target,'name':'改名分类'}): pass
+        finally:
+            path.unlink(missing_ok=True)
+
     def test_native_drag_manifest_uses_validated_library_paths(self):
         with self.request('/api/blender/drop', {'asset': self.asset['id'], 'options': {'repeat': 2}}) as response:
             prepared=json.load(response)

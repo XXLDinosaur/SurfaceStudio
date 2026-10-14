@@ -21,7 +21,11 @@
     const asset = id && byId.get(id);
     origin = card || (detail ? document.querySelector('#close-detail') : document.activeElement);
     card?.classList.add('context-target');
-    if (asset) {
+    const categoryButton = target.closest('#categories [data-category]');
+    if (categoryButton) {
+      origin = categoryButton;
+      actions = [entry('重命名分类…', 'grid', () => categoryRenamer(categoryButton.dataset.category))];
+    } else if (asset) {
       const map = target.closest('[data-map]')?.dataset.map;
       actions = [
         entry('查看材质详情', 'cube', () => openDetail(id), 'Enter'),
@@ -86,7 +90,7 @@
       if (event.key.toLowerCase() === 'f') event.stopImmediatePropagation();
     } else if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu') {
       if (editable(event.target)) return;
-      if (!event.target.closest('[data-asset],#detail')) return;
+      if (!event.target.closest('[data-asset],#detail,#categories [data-category]')) return;
       event.preventDefault(); const rect=event.target.getBoundingClientRect();
       show(event.target, rect.left+18, rect.top+18);
     }

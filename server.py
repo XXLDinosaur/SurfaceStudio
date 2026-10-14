@@ -49,7 +49,7 @@ def category_data():
 
 def categorized_library():
     _, _, edits = category_data()
-    catalog = {**CATEGORIES, **edits['custom']}
+    catalog = {**CATEGORIES, **edits['custom'], **edits.get('names', {})}
     items = []
     for source in INDEX['assets']:
         category = edits['assignments'].get(source['id'], source['category'])
@@ -68,18 +68,24 @@ def edit_category(body):
     asset = body.get('asset')
     if asset is not None and (not isinstance(asset, str) or asset not in ASSETS):
         raise ValueError('材质不存在，请刷新后重试')
-    if action == 'create':
+    if action in ('create', 'rename'):
         name = body.get('name')
         if not isinstance(name, str): raise ValueError('请输入分类名称')
         name = unicodedata.normalize('NFKC', name).strip()
         if not name or len(name) > 40 or any(ord(c) < 32 for c in name):
             raise ValueError('分类名称需要为 1–40 个有效字符')
-        catalog = {**CATEGORIES, **edits['custom']}
-        if name.casefold() in {unicodedata.normalize('NFKC', v).casefold() for v in [*catalog, *catalog.values()]}:
+        catalog = {**CATEGORIES, **edits['custom'], **edits.get('names', {})}
+        target = body.get('category') if action == 'rename' else None
+        if action == 'rename' and (not isinstance(target, str) or target not in catalog):
+            raise ValueError('分类不存在')
+        if name.casefold() in {unicodedata.normalize('NFKC', v).casefold() for k, label in catalog.items() if k != target for v in (k, label)}:
             raise ValueError('该分类已存在，请直接选择已有分类')
-        target = 'custom-' + secrets.token_hex(8)
-        edits['custom'][target] = name
-        if asset is not None: edits['assignments'][asset] = target
+        if action == 'rename':
+            edits.setdefault('names', {})[target] = name
+        else:
+            target = 'custom-' + secrets.token_hex(8)
+            edits['custom'][target] = name
+            if asset is not None: edits['assignments'][asset] = target
     elif action == 'assign':
         if asset is None: raise ValueError('请选择材质')
         target = body.get('category')

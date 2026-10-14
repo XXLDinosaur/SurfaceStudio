@@ -6,7 +6,7 @@ async function submitCategory(body, button){
     await post('/api/categories',body);
     await load();
     if(selected&&byId.has(selected))openDetail(selected);
-    $('#modal').close();toast(body.action==='create'?'分类已创建':body.category===null?'已恢复自动分类':'材质分类已更新');
+    $('#modal').close();toast(body.action==='rename'?'分类已重命名':body.action==='create'?'分类已创建':body.category===null?'已恢复自动分类':'材质分类已更新');
   }catch(error){$('#category-error').textContent=error.message}
   finally{button.disabled=false}
 }
@@ -29,3 +29,12 @@ addCategory.className='icon-button';addCategory.id='new-category';addCategory.ti
 addCategory.onclick=()=>categoryCreator();
 document.querySelector('.category-label').append(addCategory);
 document.addEventListener('click',e=>{if(e.target.closest('#edit-material-category')&&selected)categoryPicker(selected)});
+
+function categoryRenamer(id){
+  const c=library.categoryOptions.find(c=>c.id===id);if(!c)return;
+  modal('重命名分类',`<p class="modal-description">修改分类显示名称，分类中的材质会保持原有归属。</p><label class="form-label" for="category-name">分类名称</label><input id="category-name" class="form-input" maxlength="40" value="${esc(c.name)}"><p id="category-error" class="modal-error" role="alert"></p><div class="modal-actions"><button id="category-cancel" class="outline-button">取消</button><button id="category-save" class="primary-button">保存名称</button></div>`);
+  $('#category-cancel').onclick=()=>$('#modal').close();
+  $('#category-save').onclick=()=>submitCategory({action:'rename',category:id,name:$('#category-name').value},$('#category-save'));
+  $('#category-name').onkeydown=e=>{if(e.key==='Enter'&&!$('#category-save').disabled)$('#category-save').click()};
+  $('#category-name').focus();$('#category-name').select();
+}
