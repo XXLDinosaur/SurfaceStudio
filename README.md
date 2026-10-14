@@ -8,9 +8,9 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 ## 下载与启动
 
-从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.2.2-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
+从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.3.0-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
 
-合集包含 **SS 1.2.2 自动安装器、Blender 连接插件 1.1.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
+合集包含 **SS 1.3.0 自动安装器、Blender 连接插件 1.1.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
 
 1. 完整解压合集，运行 `SurfaceStudio-Setup.exe`。
 2. 选择 SS 安装目录，勾选检测到的 Blender 版本。安装器会安装并启用配套插件、配置 SS 路径。
@@ -22,6 +22,14 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 **单实例**：重复双击只唤起现有窗口。点击右上角关闭按钮会隐藏窗口并保留后台 Blender 连接，再次启动恢复同一个窗口。
 
+## 本次更新图解
+
+相比 v1.2.2，新增批量整理、整理记录备份与合并恢复，并统一了下拉菜单样式。完整对比和操作图见 **[v1.3.0 更新图解](releases/v1.3.0.md)**。
+
+![批量整理：多选后统一改分类、收藏或加入集合](docs/images/v1.3.0/bulk.png)
+
+![整理记录备份与恢复](docs/images/v1.3.0/backup.png)
+
 ## v1.2.2：分类管理与柔和日间模式
 
 侧栏“材质分类”旁的 **+** 可创建分类。右键材质 → **修改分类**，或在详情中点击 **修改分类**，可以改归到已有分类，也可新建分类并归入；支持恢复自动分类。记录按素材库路径隔离，重扫及重启后保留，原始文件不移动。右键左侧分类名称可重命名，默认分类和自建分类均支持。
@@ -29,7 +37,7 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 侧栏分组标题加大加重；日间模式采用较低亮度的灰青玻璃与中性灰预览背景，让浅色材质更容易辨认。
 
 
-## 本地 1.3.0：批量整理与备份
+## v1.3.0：批量整理与备份
 
 点击顶部“批量整理”，点选材质；Ctrl/Cmd 可直接进入多选，Shift 连选。“全选筛选结果”包含当前筛选下尚未滚动加载的材质。切换筛选后，不在结果内的选择会清除。支持批量改分类（含恢复自动分类）、收藏、取消收藏和加入已有集合；处理前会确认数量。批量模式不启动 Blender 拖拽。
 
