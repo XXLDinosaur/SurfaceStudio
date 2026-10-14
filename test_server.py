@@ -45,6 +45,39 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual({m['channel'] for m in a['maps']},{'Albedo','Normal'})
         self.assertTrue(a['meta']['tileable'])
 
+    def test_custom_categories_persist_rescan_and_isolate_roots(self):
+        path=app.DATA/'categories.json'
+        try:
+            with self.request('/api/categories', {'action':'create','name':' 我的石材 '}) as r: self.assertTrue(json.load(r)['ok'])
+            with self.request('/api/library') as r: library=json.load(r)
+            custom=next(c for c in library['categories'] if c['name']=='我的石材')
+            self.assertEqual(custom['count'],0)
+            with self.request('/api/categories', {'action':'assign','asset':self.asset['id'],'category':custom['id']}): pass
+            app.scan()
+            with self.request('/api/library') as r: library=json.load(r)
+            self.assertEqual(library['assets'][0]['category'],custom['id'])
+            self.assertTrue(library['assets'][0]['manualCategory'])
+            self.assertEqual(app.INDEX['assets'][0]['category'],'Concrete')
+            self.assertTrue(path.is_file())
+            original=app.INDEX['root']
+            try:
+                app.INDEX['root']=str(self.root/'another-library')
+                self.assertFalse(app.categorized_library()['assets'][0]['manualCategory'])
+                self.assertNotIn(custom['id'],[c['id'] for c in app.categorized_library()['categories']])
+            finally: app.INDEX['root']=original
+            for body in [{'action':'create','name':'我的石材'},{'action':'create','name':'混凝土'},
+                         {'action':'create','name':' '*3},{'action':'assign','asset':self.asset['id'],'category':'missing'},
+                         {'action':'create','name':'新分类','asset':'missing'}]:
+                with self.assertRaises(HTTPError): self.request('/api/categories',body)
+            with self.assertRaises(HTTPError) as error: self.request('/api/categories',{'action':'create','name':'未授权'},token=False)
+            self.assertEqual(error.exception.code,403)
+            with self.request('/api/categories', {'action':'assign','asset':self.asset['id'],'category':None}): pass
+            with self.request('/api/library') as r: library=json.load(r)
+            self.assertEqual(library['assets'][0]['category'],'Concrete')
+            self.assertEqual(next(c for c in library['categories'] if c['id']==custom['id'])['count'],0)
+        finally:
+            path.unlink(missing_ok=True)
+
     def test_native_drag_manifest_uses_validated_library_paths(self):
         with self.request('/api/blender/drop', {'asset': self.asset['id'], 'options': {'repeat': 2}}) as response:
             prepared=json.load(response)

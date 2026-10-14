@@ -1,6 +1,6 @@
 """Surface Studio — local, read-only material indexing and preview service."""
 from __future__ import annotations
-import hashlib, io, json, mimetypes, os, re, secrets, threading, time
+import hashlib, io, json, mimetypes, os, re, secrets, threading, time, unicodedata
 from collections import Counter
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
@@ -41,6 +41,58 @@ SCANNING = False
 SCAN_ERROR = None
 ASSETS = {}
 BRIDGE = BlenderBridge(DATA / 'blender')
+
+def category_data():
+    data = read_json(DATA / 'categories.json', {})
+    key = os.path.normcase(str(Path(INDEX['root']).resolve()))
+    return data, key, data.get(key, {'custom': {}, 'assignments': {}})
+
+def categorized_library():
+    _, _, edits = category_data()
+    catalog = {**CATEGORIES, **edits['custom']}
+    items = []
+    for source in INDEX['assets']:
+        category = edits['assignments'].get(source['id'], source['category'])
+        if category not in catalog: category = source['category']
+        items.append({**source, 'category': category, 'categoryZh': catalog[category],
+                      'automaticCategory': source['category'], 'manualCategory': source['id'] in edits['assignments']})
+    counts = Counter(a['category'] for a in items)
+    categories = [{'id': k, 'name': catalog[k], 'count': counts[k]} for k in dict.fromkeys([*counts, *edits['custom']])]
+    categories.sort(key=lambda c: -c['count'])
+    return {**INDEX, 'assets': items, 'categories': categories,
+            'categoryOptions': [{'id': k, 'name': v} for k, v in catalog.items()]}
+
+def edit_category(body):
+    data, key, edits = category_data()
+    action = body.get('action')
+    asset = body.get('asset')
+    if asset is not None and (not isinstance(asset, str) or asset not in ASSETS):
+        raise ValueError('材质不存在，请刷新后重试')
+    if action == 'create':
+        name = body.get('name')
+        if not isinstance(name, str): raise ValueError('请输入分类名称')
+        name = unicodedata.normalize('NFKC', name).strip()
+        if not name or len(name) > 40 or any(ord(c) < 32 for c in name):
+            raise ValueError('分类名称需要为 1–40 个有效字符')
+        catalog = {**CATEGORIES, **edits['custom']}
+        if name.casefold() in {unicodedata.normalize('NFKC', v).casefold() for v in [*catalog, *catalog.values()]}:
+            raise ValueError('该分类已存在，请直接选择已有分类')
+        target = 'custom-' + secrets.token_hex(8)
+        edits['custom'][target] = name
+        if asset is not None: edits['assignments'][asset] = target
+    elif action == 'assign':
+        if asset is None: raise ValueError('请选择材质')
+        target = body.get('category')
+        if target is None:
+            edits['assignments'].pop(asset, None)
+        else:
+            if not isinstance(target, str) or target not in {**CATEGORIES, **edits['custom']}:
+                raise ValueError('分类不存在')
+            edits['assignments'][asset] = target
+    else: raise ValueError('无效的分类操作')
+    data[key] = edits
+    save_json(DATA / 'categories.json', data)
+    return {'ok': True}
 
 def scan():
     global INDEX, ASSETS, SCANNING, SCAN_ERROR
@@ -120,7 +172,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if url.path == '/api/health': return self.send({'app':'Surface Studio','ready':True})
             if url.path == '/api/library':
-                return self.send({**INDEX,'state':STATE,'token':TOKEN,'scanning':SCANNING,'error':SCAN_ERROR})
+                with LOCK:
+                    return self.send({**categorized_library(),'state':STATE,'token':TOKEN,'scanning':SCANNING,'error':SCAN_ERROR})
             if url.path == '/api/status': return self.send({'scanning':SCANNING,'error':SCAN_ERROR,'count':len(ASSETS)})
             if url.path == '/api/state': return self.send(STATE)
             if url.path == '/api/blender/status':
@@ -163,6 +216,7 @@ class Handler(BaseHTTPRequestHandler):
             body=json.loads(self.rfile.read(length) or '{}')
             endpoint=urlparse(self.path).path
             with LOCK:
+                if endpoint == '/api/categories': return self.send(edit_category(body))
                 if endpoint in ('/api/blender/apply', '/api/blender/drop'):
                     a = ASSETS.get(body.get('asset'))
                     if not a: raise ValueError('材质不存在，请刷新素材库')
