@@ -8,13 +8,13 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 ## 下载与启动
 
-从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.3.0-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
+从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.4.0-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
 
-合集包含 **SS 1.3.0 自动安装器、Blender 连接插件 1.1.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
+合集包含 **SS 1.4.0 自动安装器、Blender 连接插件 1.1.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
 
 1. 完整解压合集，运行 `SurfaceStudio-Setup.exe`。
 2. 选择 SS 安装目录，勾选检测到的 Blender 版本。安装器会安装并启用配套插件、配置 SS 路径。
-3. 打开 SS，在 **材质库设置** 中选择自己的素材目录并扫描。
+3. 打开 SS，在 **材质库设置** 中选择包含材质子文件夹的根目录并扫描。导入前请阅读 **[目录层级与格式说明](docs/import-materials.md)**，避免选错目录后扫描为 0。
 
 要求 Windows 10 / 11 x64 和 Microsoft Edge WebView2 Runtime。自动安装支持已验证的 Blender **4.2、4.3、5.1、5.2 正式版系列**；自定义或便携安装可手动选择 `blender.exe`。其他版本暂不自动安装。WebView2 可从 [Microsoft 官方页面](https://developer.microsoft.com/microsoft-edge/webview2/) 获取。
 
@@ -22,7 +22,23 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 **单实例**：重复双击只唤起现有窗口。点击右上角关闭按钮会隐藏窗口并保留后台 Blender 连接，再次启动恢复同一个窗口。
 
-## 本次更新图解
+## v1.4.0 更新图解
+
+新增独立纯法线贴图库，并补全导入层级与支持格式说明。先看 **[素材导入指南](docs/import-materials.md)**，完整更新见 **[v1.4.0 图文说明](releases/v1.4.0.md)**。
+
+![两种图库的目录层级](docs/images/v1.4.0/import-structure.png)
+
+![纯法线图库：每张图独立整理](docs/images/v1.4.0/normals.png)
+
+## v1.4.0：纯法线贴图库与导入指南
+
+为收集水波、涟漪等零散法线图，**材质库设置** 新增可选的 **法线贴图库（每张图单独入库）**。指定目录后递归扫描，一张图片作为一个独立法线资产，文件名不必包含 `Normal`。可使用独立目录或普通材质库的专用子目录；不要选普通库本身或其上级，也不要混入颜色图、粗糙度图和封面图。
+
+点击侧栏或顶部筛选中的 **纯法线贴图**，可以查看法线原图、平铺检视，并沿用收藏、集合、分类、批量整理和备份。已有 PBR 材质中仅含 Normal 通道的条目也会进入该筛选。EXR 可索引并将原文件发送给 Blender，SS 界面显示预览占位提示。
+
+配套 Blender 插件仍为 **1.1.0**：赋予时生成连接法线图的基础新材质，不自动生成透明水材质，也不会给已有水材质叠加法线。具体目录示例、支持格式、EXR 限制和使用步骤见 **[素材导入指南](docs/import-materials.md)**。v1.3.0 没有独立法线图库入口；普通材质库的一层目录限制在 v1.4.0 中保持不变。
+
+## v1.3.0 更新回顾
 
 相比 v1.2.2，新增批量整理、整理记录备份与合并恢复，并统一了下拉菜单样式。完整对比和操作图见 **[v1.3.0 更新图解](releases/v1.3.0.md)**。
 
@@ -43,7 +59,7 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 侧栏底部“整理备份与恢复”→ 创建备份。JSON 保存在软件目录 `data/organization-backups`，可点击打开文件夹后复制到其他盘或云盘。它包含当前素材库的分类、改名、收藏、集合和最近浏览，不含原始贴图、预览缓存、外观偏好或 Blender 设置。
 
-换电脑时先导入素材库，再选择 JSON 备份；按材质子文件夹名称匹配，因此盘符可改变，但子文件夹改名后无法匹配。恢复前显示匹配和跳过数量。当前版本采用合并恢复：保留当前已有的手动归类和分类改名，补充收藏与集合，不删除当前整理结果；这不是覆盖还原到历史快照。未匹配的材质记录不导入，可保留备份文件等素材补齐后再次恢复。
+换电脑时先导入素材库，再选择 JSON 备份；普通材质按子文件夹名称匹配。v1.4.0 的独立法线资产按相对于法线图库根目录的文件路径（含文件名）匹配，与普通材质区分；盘符可改变，但相对路径或名称改变后无法匹配。恢复前显示匹配和跳过数量。当前版本采用合并恢复：保留当前已有的手动归类和分类改名，补充收藏与集合，不删除当前整理结果；这不是覆盖还原到历史快照。未匹配的材质记录不导入，可保留备份文件等素材补齐后再次恢复。
 
 批量操作与恢复前自动创建备份。请定期将备份复制到软件目录以外；它不能代替原始贴图备份。
 
@@ -54,6 +70,7 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 | 功能 | 说明 |
 | --- | --- |
 | 本地索引 | 材质子目录、Quixel / Megascans 元信息、PBR 贴图与预览 |
+| 纯法线图库 | v1.4.0：专用目录递归读取、一图一资产、原图 / 平铺检视、纯法线筛选 |
 | 搜索筛选 | 名称、标签、中英文关键词；分类、分辨率、通道和平铺筛选 |
 | 浏览 | 紧凑、标准、大图、列表；固定搜索栏；滚动到底部自动加载 |
 | 整理 | 手动归类、新建及重命名分类、恢复自动分类、收藏、最近浏览、自建集合 |
@@ -79,9 +96,13 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
     ...
 ```
 
-选择包含各个材质子文件夹的目录。支持中文路径和常见 Bridge 结构，缺少 JSON 的目录也可索引。新增或删除素材后重新扫描。
+选择包含各个材质子文件夹的目录，每个材质的图片直接放在子文件夹内。**普通材质库当前不递归扫描：不要直接选择只放贴图的目录，也不要在根目录和材质文件夹之间再套一层分类。** 支持中文路径；JSON 可选，但并非所有第三方 JSON 都兼容。新增或删除素材后重新扫描。
 
-原材质只读访问，不搬动、不重命名。材质球使用资源库已有预览图，**不是实时 PBR 渲染器**。EXR 预览依赖同通道 JPG 代理，不建议只有 EXR、没有代理图的资源包。
+支持索引 **JPG / JPEG、PNG、TIF / TIFF、EXR**；EXR 预览受限。当前不导入 WebP、BMP、TGA、DDS、HDR，不解析 `.blend`、`.sbsar`，也不自动解压 ZIP / RAR。
+
+目录示例、各格式预览能力、命名规则和扫描排查步骤见 **[素材导入指南](docs/import-materials.md)**。
+
+原材质只读访问，不搬动、不重命名。材质球使用资源库已有预览图，**不是实时 PBR 渲染器**。普通材质的 EXR 预览依赖可用代理图；独立 EXR 法线资产显示占位提示。法线原图与平铺检视不等于水面材质的渲染效果。
 
 ## Blender 联动
 
@@ -125,7 +146,7 @@ python -m venv .venv
 
 ### 自动安装 Blender 连接
 
-新增 `SurfaceStudio-Setup.exe` 安装器，检测 Blender 后可一次安装 SS、启用连接插件并配置程序路径。常规安装无需单独在 Blender 中安装插件；便携版可手动指定 `blender.exe`。详情与限制见 [安装说明](INSTALLER.md)。安装器当前本地构建内置 SS v1.1.0 与插件 v1.1.0，包含视口拖拽赋材质。
+新增 `SurfaceStudio-Setup.exe` 安装器，检测 Blender 后可一次安装 SS、启用连接插件并配置程序路径。常规安装无需单独在 Blender 中安装插件；便携版可手动指定 `blender.exe`。详情与限制见 [安装说明](INSTALLER.md)。安装器内置 SS v1.4.0 与插件 v1.1.0，包含视口拖拽赋材质。
 
 先构建 SS EXE，再执行 `./build_installer.ps1 -Python ./.venv/Scripts/python.exe`。输出 `dist/SurfaceStudio-Setup.exe`。安装器只包含显式列出的软件、插件和说明文件，不复制个人数据。
 
@@ -142,7 +163,7 @@ EXE 输出到 `dist/Surface Studio.exe`，插件输出为 `surface_studio_bridge
 ## 测试
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest test_server test_bridge test_installer test_drag test_material_drag test_single_instance
+.\.venv\Scripts\python.exe -m unittest test_normal_library test_server test_bridge test_installer test_drag test_material_drag test_single_instance
 & '你的Blender安装目录\blender.exe' --background --factory-startup --python-exit-code 1 --python test_blender.py
 ```
 
@@ -168,6 +189,7 @@ EXE 输出到 `dist/Surface Studio.exe`，插件输出为 `surface_studio_bridge
 - **更新后还是旧界面**：退出旧 SS 后台进程再启动新版。
 - **Blender 未连接**：检查插件启用状态和 EXE 路径，从 Blender 侧栏打开材质库。
 - **没有缩略图**：检查预览图是否存在；EXR 需要可用代理图。
+- **扫描为 0 / 缺少材质**：先检查 [目录层级、支持格式与 JSON 说明](docs/import-materials.md)。普通材质库当前只读取根目录下一层材质文件夹中的图片。
 - **主题或字号重置**：从旧 Edge 独立窗口迁移到 WebView2 需重新选择一次，收藏不受影响。
 
 ## 项目结构

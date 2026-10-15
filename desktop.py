@@ -142,7 +142,7 @@ def run_primary(instance):
         return
     import server
     saved=server.read_json(server.DATA/'index.json',None)
-    if saved and saved.get('root')==server.CONFIG['root']:
+    if saved and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot',''):
         server.INDEX=saved
         server.ASSETS={a['id']:a for a in saved['assets']}
     else: server.scan()

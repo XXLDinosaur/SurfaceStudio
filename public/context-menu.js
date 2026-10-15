@@ -37,9 +37,9 @@
         entry(compared.includes(id) ? '移出对比' : '加入材质对比', 'compare', () => toggleCompare(id)),
         null,
         entry('在资源管理器中打开', 'folder', () => post('/api/open',{id}).then(() => toast('已打开材质文件夹'))),
-        entry('复制文件夹路径', 'copy', () => copy(library.root+'\\'+asset.folder)),
+        entry('复制文件夹路径', 'copy', () => copy(assetFolder(asset))),
       ];
-      if (map) actions.push(entry('复制这张贴图的路径', 'copy', () => copy(library.root+'\\'+asset.folder+'\\'+map)));
+      if (map) actions.push(entry('复制这张贴图的路径', 'copy', () => copy(assetFolder(asset)+'\\'+map)));
     } else {
       actions = [entry('查看全部材质', 'grid', () => navigate()),
         entry('重新扫描素材库', 'refresh', () => rescan()), null,

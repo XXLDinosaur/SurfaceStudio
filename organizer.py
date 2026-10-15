@@ -14,7 +14,7 @@ def export(app):
     state['collections'] = [{**c, 'ids': [x for x in c['ids'] if x in ids]} for c in state['collections']]
     state['recent'] = [x for x in state['recent'] if (x if isinstance(x, str) else x.get('id')) in ids]
     return {'format': 'surface-studio-organization', 'version': 1, 'created': time.time(),
-            'root': app.INDEX['root'], 'materials': {k: a['folder'] for k, a in app.ASSETS.items()},
+            'root': app.INDEX['root'], 'materials': {k: a.get('libraryKey',a['folder']) for k, a in app.ASSETS.items()},
             'state': state, 'categories': copy.deepcopy(edits)}
 
 
@@ -47,7 +47,7 @@ def validate(data):
 
 def restore_plan(app, raw):
     data=validate(raw)
-    current={a['folder']: k for k,a in app.ASSETS.items()}
+    current={a.get('libraryKey',a['folder']): k for k,a in app.ASSETS.items()}
     mapping={k:current[folder] for k,folder in data['materials'].items() if folder in current}
     allcats,key,edits=app.category_data();edits=copy.deepcopy(edits);state=copy.deepcopy(app.STATE)
     source=data['categories'];catalog={**app.CATEGORIES,**edits['custom'],**edits.get('names',{})}
