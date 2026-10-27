@@ -2,6 +2,14 @@
 
 配套 Blender 插件 **1.2.2**。首次安装或从 1.4.0 升级，请下载 **SurfaceStudio-v1.5.0-Windows-x64-with-Blender.zip**，解压后运行安装器。Source code ZIP 是源码，不是软件安装包。
 
+## SS 与 Blender 操作图解
+
+使用玻璃材质示例展示活动材质选择、添加到 SS、保存位置与材质浏览，查看 [完整分步图解](https://github.com/XXLDinosaur/SurfaceStudio/blob/main/docs/glass-workflow.md)。
+
+![Blender 玻璃示例与 Surface Studio 插件面板](https://raw.githubusercontent.com/XXLDinosaur/SurfaceStudio/main/docs/images/v1.5.0/blender-glass-scene.png)
+
+![SS 玻璃材质库](https://raw.githubusercontent.com/XXLDinosaur/SurfaceStudio/main/docs/images/v1.5.0/ss-glass-library.png)
+
 ## 与 1.4.0 相比
 
 - **Blender → SS 一键入库**：在 Blender 点击“添加到 SS”，保存到 SS 指定目录，默认与当前材质库一致。保留静态节点组和内嵌贴图，生成预览，自动进入置顶的“未分类”。整包保留后，重装软件重新添加目录即可使用。

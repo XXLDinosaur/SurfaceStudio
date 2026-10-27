@@ -12,6 +12,14 @@ SS 1.5.0 / 插件 1.2.2 新增“添加到 SS”：直接保存到 SS 设置的�
 
 ## 下载与启动
 
+### 玻璃材质图文演示
+
+使用玻璃材质示例，逐步说明 Blender 活动材质选择、添加到 SS、保存位置、未分类和再次赋予模型。查看 **[SS + Blender 操作图解](docs/glass-workflow.md)**。
+
+![Blender 中的玻璃示例与 SS 插件](docs/images/v1.5.0/blender-glass-scene.png)
+
+![SS 中识别的 Blender 玻璃材质](docs/images/v1.5.0/ss-glass-library.png)
+
 1.5.0 加入了 GitHub 正式版本检查：在「材质库设置 → 软件更新」查看更新说明、下载校验后的安装包并确认安装。支持关闭自动检查；使用方式和发布签名流程见 [软件更新说明](docs/auto-update.md)。1.4.0 及更早版本需要先手动安装本版，以后才能在软件内更新。发现新版时，左下角材质库设置旁会显示“更新”。
 
 从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.5.0-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
