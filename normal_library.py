@@ -1,3 +1,4 @@
+from material_names import apply_metadata
 """Explicit normal-map source: each image is an independent, stable asset."""
 import hashlib
 import os
@@ -34,4 +35,4 @@ def scan_normals(source, warnings):
                     'maps':[{'name':name,'channel':'Normal','bytes':stat.st_size,'ext':path.suffix[1:].upper()}],
                     'bytes':stat.st_size,'modified':stat.st_mtime,'meta':{}})
             except OSError as exc: warnings.append('法线 '+str(path)+': '+str(exc))
-    return result
+    return [apply_metadata(a,Path(a['sourceRoot'])/a['folder']/(a['preview']+'.surface.json')) for a in result]

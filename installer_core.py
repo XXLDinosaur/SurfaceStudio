@@ -17,7 +17,7 @@ import uuid
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 MODULE = 'surface_studio_bridge'
 # Each minor series is verified by the installer integration tests.
-SUPPORTED = {(4, 2), (4, 3), (5, 1), (5, 2)}
+SUPPORTED = {(4, 2), (4, 3), (4, 4), (4, 5), (5, 0), (5, 1), (5, 2)}
 SPAWN_LOCK = threading.Lock()
 
 

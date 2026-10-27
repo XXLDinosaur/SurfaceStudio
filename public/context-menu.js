@@ -32,7 +32,7 @@
         entry('赋予到 Blender', 'arrow', () => window.surfaceBlender.applyFromMenu(id)),
         null,
         entry(state.favorites.includes(id) ? '取消收藏' : '收藏材质', 'heart', () => setFavorite(id)),
-        entry('添加到集合…', 'folder', () => collectionPicker(id)),
+        entry('重命名…', 'copy', () => materialRenamer(id)),
         entry('修改分类…', 'grid', () => categoryPicker(id)),
         entry(compared.includes(id) ? '移出对比' : '加入材质对比', 'compare', () => toggleCompare(id)),
         null,

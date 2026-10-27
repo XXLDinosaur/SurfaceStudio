@@ -8,7 +8,6 @@
 .workbench-controls .tabs{gap:16px}
 .workbench-controls .tabs>button{padding:0;height:auto;margin:0}
 .workbench-controls .tabs>button:after{display:none}
-.workbench-controls .tabs #featured-toggle{font-size:var(--read-secondary);padding:5px 12px;border-radius:12px;font-weight:400}
 .workbench-controls .tab-caption{display:none}
 .workbench-controls .library-status{margin:0}
 .workbench-controls .toolbar{position:relative;top:auto;flex-wrap:wrap;margin:0;gap:8px;padding:8px;border-radius:18px}
@@ -20,7 +19,6 @@
 .workbench-controls .has-value,.workbench-controls .icon-button.active{background:#659c8130!important;border-color:#578e76!important;color:var(--text)!important;box-shadow:inset 0 0 0 1px #689f81}
 #clear-workbench-filters{padding:8px;white-space:nowrap;font-size:var(--read-secondary)}
 #scroll-area{padding:18px 26px 0!important;min-height:0;flex:1;overflow-y:auto;scrollbar-gutter:stable}
-.featured{margin:0 0 20px;height:220px}
 .asset-grid{gap:14px;grid-template-columns:repeat(auto-fill,minmax(min(var(--card-size),100%),1fr))}
 .asset-card{border-radius:16px;background:#edf0f1!important;box-shadow:0 2px 8px #1026320b!important}
 .card-image{aspect-ratio:1.2;background:radial-gradient(ellipse at center,#d5dadd,#e8ecee)!important}
@@ -36,9 +34,18 @@
 .brand{padding-bottom:24px!important}
 .brand-icon{width:48px;height:48px;object-fit:contain;border-radius:12px;flex-shrink:0}
 .sidebar .nav-label{margin-top:16px;margin-bottom:8px}
-.categories{max-height:none!important;min-height:90px;flex:1;overflow-y:auto}
+.categories{max-height:none!important;min-height:0!important;flex:1 1 0;overflow-y:auto}
 #collections{max-height:160px;overflow-y:auto;flex-shrink:0}
 .sidebar-bottom{margin-top:12px;flex-shrink:0}
+.sidebar>.brand,.sidebar>.nav-label,.sidebar>#main-nav{flex-shrink:0}
+.sidebar-bottom .library-info .storage{max-height:80px;overflow:auto;overflow-wrap:anywhere}
+@media(max-height:800px){
+  .sidebar{padding-top:14px!important;padding-bottom:10px!important}
+  .sidebar .brand{padding-bottom:12px!important}
+  .sidebar .nav-label{margin-top:10px;margin-bottom:6px}
+  .sidebar-bottom{margin-top:6px;padding-top:0}
+  .sidebar-bottom .library-info{padding-top:6px;padding-bottom:6px}
+}
 .library-info{border-top:1px solid var(--line);padding:12px 4px;font-size:var(--read-secondary)}
 .library-info summary{cursor:pointer;color:var(--text)}
 .library-info summary span{display:block;font-size:var(--read-small);color:var(--ink-muted);padding-left:16px}
@@ -59,3 +66,16 @@ html[data-appearance="dark"] .appearance-popover{background:#293943}
 .detail-body .copy-path{margin:0 0 20px;font-size:var(--read-main);min-height:42px}
 .detail-body .detail-add{margin-bottom:10px}
 .load-more #load-more{font-size:var(--read-secondary);color:var(--ink-muted)}
+
+.inline-material-name{display:block;width:100%;min-width:0;font:inherit;line-height:inherit;color:inherit;background:var(--input,#6c9e8120);border:1px solid var(--accent);border-radius:5px;padding:0 3px;outline:none;box-sizing:border-box;user-select:text}
+.inline-material-name[aria-invalid="true"]{border-color:#ce7970}
+.inline-material-name[aria-busy="true"]{opacity:.65}
+
+/* Settings actions and discreet update reminder. */
+.settings-tools{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 24px}
+.sidebar-bottom{display:flex;align-items:center;gap:10px}
+.sidebar-bottom #settings{flex:1;min-width:0}
+.sidebar-update{flex:none;border:1px solid rgba(145,201,181,.45);border-radius:12px;padding:7px 11px;background:rgba(122,180,157,.15);color:var(--text);font:inherit;font-size:var(--read-secondary);cursor:pointer;white-space:nowrap}
+.sidebar-update:hover{background:rgba(122,180,157,.3)}
+.sidebar-update:focus-visible{outline:2px solid #91c9b5;outline-offset:3px}
+.sidebar-update[hidden]{display:none!important}

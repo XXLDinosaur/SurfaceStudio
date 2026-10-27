@@ -1,7 +1,7 @@
 bl_info = {
     'name': 'Surface Studio — 本地材质库',
     'author': 'Surface Studio',
-    'version': (1, 1, 0),
+    'version': (1, 2, 2),
     'blender': (4, 2, 0),
     'location': '3D Viewport > Sidebar > Surface Studio',
     'description': '打开 Surface Studio，将本地 PBR 材质一键赋予选中模型或选中的面',
@@ -23,6 +23,8 @@ import bmesh
 from bpy.props import StringProperty
 from bpy.types import AddonPreferences, Operator, Panel, FileHandler
 from bpy.app.handlers import persistent
+from .native_material import import_material
+from .export_operator import SURFACESTUDIO_OT_export
 
 DEFAULT_EXE = str(Path.home() / 'SurfaceStudio' / 'Surface Studio.exe')
 SESSION = uuid.uuid4().hex
@@ -74,7 +76,7 @@ def snapshot():
             'mode': context.mode, 'selectedFaces': sum(len(f[1]) for f in faces),
             'file': Path(bpy.data.filepath).name if bpy.data.filepath else '未保存的场景',
             'version': bpy.app.version_string, 'pid': os.getpid(), 'busy': BUSY,
-            'message': LAST_MESSAGE, 'protocol': 1}
+            'message': LAST_MESSAGE, 'protocol': 1, 'nativeMaterials': True}
 
 
 def publish():
@@ -148,7 +150,7 @@ def validate_job(job, target=None):
     if not math.isfinite(repeat) or not 0.01 <= repeat <= 100:
         raise ValueError('无效贴图平铺次数')
     for obj in objects:
-        if not obj.data.uv_layers:
+        if not obj.data.uv_layers and job.get('material',{}).get('kind') != 'blend':
             if current['mode'] == 'EDIT_MESH' or not opts.get('autoUV', True):
                 raise ValueError(f'{obj.name} 没有 UV，请先展开 UV，或在对象模式启用自动 UV')
     manifest = job.get('material', {})
@@ -162,7 +164,11 @@ def validate_job(job, target=None):
             raise ValueError('贴图丢失或路径不在当前材质目录中')
         if path.suffix.lower() not in ('.jpg', '.jpeg', '.png', '.tif', '.tiff', '.exr'):
             raise ValueError('不支持的贴图格式')
-    if not manifest.get('maps'):
+    if manifest.get('kind') == 'blend':
+        native_path = Path(manifest.get('native',{}).get('path','')).resolve()
+        if not native_path.is_relative_to(folder) or native_path.name != 'material.blend' or not native_path.is_file():
+            raise ValueError('Blender 材质文件缺失或路径无效')
+    elif not manifest.get('maps'):
         raise ValueError('该材质没有可用贴图')
     return objects, opts
 
@@ -183,6 +189,8 @@ def choose_maps(manifest, opts):
 
 
 def build_material(manifest, opts):
+    if manifest.get('kind') == 'blend':
+        return import_material(manifest)
     signature = hashlib.sha256(json.dumps({'id': manifest['id'], 'folder': manifest['folder'],
         'root': manifest['root'], 'options': opts}, sort_keys=True).encode()).hexdigest()
     # Reuse only our material for the same asset/options, never replace another shader graph.
@@ -497,6 +505,7 @@ class SURFACESTUDIO_FH_material(FileHandler):
 class SURFACESTUDIO_Preferences(AddonPreferences):
     bl_idname = __name__
     executable_path: StringProperty(name='Surface Studio 程序', subtype='FILE_PATH', default=DEFAULT_EXE)
+    export_directory: StringProperty(name='上次材质存放目录', subtype='DIR_PATH', default='')
 
     def draw(self, context):
         self.layout.prop(self, 'executable_path')
@@ -543,6 +552,11 @@ class SURFACESTUDIO_PT_panel(Panel):
         layout.label(text='你的私人 PBR 材质库', icon='MATERIAL')
         row = layout.row(); row.scale_y = 1.6
         row.operator('surface_studio.open_library', icon='ASSET_MANAGER')
+        box = layout.box()
+        box.label(text='当前活动材质 → SS 未分类', icon='MATERIAL')
+        if context.object and context.object.active_material:
+            box.label(text=context.object.active_material.name)
+        box.operator('surface_studio.export_material', icon='EXPORT')
         row = layout.row()
         row.label(text='已连接' if CONNECTED else '未连接', icon='LINKED' if CONNECTED else 'UNLINKED')
         row.operator('surface_studio.connect', text='断开' if CONNECTED else '连接')
@@ -568,15 +582,33 @@ def on_load(_):
 
 
 CLASSES = (SURFACESTUDIO_Preferences, SURFACESTUDIO_OT_apply, SURFACESTUDIO_OT_open,
-           SURFACESTUDIO_OT_connect, SURFACESTUDIO_PT_panel, SURFACESTUDIO_OT_drop, SURFACESTUDIO_FH_material)
+           SURFACESTUDIO_OT_connect, SURFACESTUDIO_PT_panel, SURFACESTUDIO_OT_drop, SURFACESTUDIO_FH_material, SURFACESTUDIO_OT_export)
+
+
+LAST_CONNECT_REQUEST = ''
+
+
+def listen_for_connection():
+    global LAST_CONNECT_REQUEST
+    try:
+        request=read_json(executable().parent/'data'/'blender'/'connect-request.json')
+        if isinstance(request,dict) and isinstance(request.get('id'),str) and request['id']!=LAST_CONNECT_REQUEST and time.time()<=request.get('expires',0)<=time.time()+20:
+            connect()
+            LAST_CONNECT_REQUEST=request['id']
+            refresh_panels()
+    except Exception:
+        pass
+    return 1.0
 
 
 def register():
     for cls in CLASSES: bpy.utils.register_class(cls)
+    if not bpy.app.timers.is_registered(listen_for_connection): bpy.app.timers.register(listen_for_connection, first_interval=1.0, persistent=True)
     if on_load not in bpy.app.handlers.load_post: bpy.app.handlers.load_post.append(on_load)
 
 
 def unregister():
+    if bpy.app.timers.is_registered(listen_for_connection): bpy.app.timers.unregister(listen_for_connection)
     disconnect()
     if on_load in bpy.app.handlers.load_post: bpy.app.handlers.load_post.remove(on_load)
     for cls in reversed(CLASSES): bpy.utils.unregister_class(cls)

@@ -86,7 +86,7 @@ class LibraryTests(unittest.TestCase):
             with self.request('/api/library') as r: library=json.load(r)
             self.assertEqual(library['assets'][0]['category'],'Concrete')
             self.assertEqual(library['assets'][0]['categoryZh'],'我的混凝土')
-            self.assertEqual(library['categories'][0]['name'],'我的混凝土')
+            self.assertEqual(next(c['name'] for c in library['categories'] if c['id']=='Concrete'),'我的混凝土')
             with self.request('/api/categories', {'action':'create','name':'测试分类','asset':self.asset['id']}): pass
             with self.request('/api/library') as r: target=json.load(r)['assets'][0]['category']
             with self.request('/api/categories', {'action':'rename','category':target,'name':'改名分类'}): pass
@@ -211,7 +211,8 @@ class LibraryTests(unittest.TestCase):
         with self.request('/api/library') as r:
             data=json.load(r)
             self.assertEqual(len(data['assets']),1)
-            self.assertEqual(data['categories'][0]['count'],1)
+            self.assertEqual(data['categories'][0]['id'],'Uncategorized')
+            self.assertEqual(next(c['count'] for c in data['categories'] if c['id']=='Concrete'),1)
             self.assertEqual(data['warnings'],[])
 
     def test_blender_http_export_contains_real_paths(self):

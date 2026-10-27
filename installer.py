@@ -9,6 +9,7 @@ import threading
 import installer_core as core
 
 ROOT = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
+UPDATE_ARGS = None
 PAYLOAD = ROOT/'installer_payload' if getattr(sys, 'frozen', False) else ROOT/'dist/installer_payload'
 
 
@@ -24,7 +25,26 @@ class Setup:
 
     def defaults(self):
         destination = Path(os.environ.get('LOCALAPPDATA', str(Path.home())))/'Programs/SurfaceStudio'
-        return {'destination': str(destination), 'ss_version': '1.4.0', 'addon_version': '1.1.0'}
+        if UPDATE_ARGS:
+            from update_handoff import validate_destination
+            destination,ready=validate_destination(UPDATE_ARGS.update_destination,UPDATE_ARGS.ready_file)
+            ready.write_text(json.dumps({'ready':True}),encoding='utf-8')
+        return {'destination': str(destination), 'ss_version': '1.5.0', 'addon_version': '1.2.2', 'updateMode':bool(UPDATE_ARGS)}
+
+    def auto_update(self):
+        if not UPDATE_ARGS:return {'error':'不是更新模式'}
+        try:
+            from update_handoff import validate_destination,wait_for_previous
+            destination,_=validate_destination(UPDATE_ARGS.update_destination,UPDATE_ARGS.ready_file)
+            self._status.update(busy=True,stage='正在等待旧版 SS 退出…')
+            wait_for_previous([int(p) for p in UPDATE_ARGS.wait_pids.split(',')])
+            self._status['busy']=False
+            result=self.scan()
+            if result.get('error'):return result
+            return self.install(str(destination),[i['path'] for i in self._items if i.get('supported')])
+        except Exception as exc:
+            self._status.update(busy=False,stage='更新未完成')
+            return {'error':str(exc)}
 
     def scan(self):
         if not self._guard.acquire(blocking=False): return {'error': '正在处理，请稍候'}
@@ -95,7 +115,7 @@ class Setup:
             self._status['stage'] = '安装完成' if all(r['ok'] for r in results) else 'SS 已安装，部分项目需要处理后重试'
             report = executable.parent/'data/installer-report.json'
             report.parent.mkdir(parents=True, exist_ok=True)
-            report.write_text(json.dumps({'software': '1.4.0', 'addon': '1.1.0', 'results': results}, ensure_ascii=False, indent=2), encoding='utf-8')
+            report.write_text(json.dumps({'software': '1.5.0', 'addon': '1.2.2', 'results': results}, ensure_ascii=False, indent=2), encoding='utf-8')
             return {'results': results, 'installed': str(executable)}
         except Exception as exc:
             self._status['stage'] = '安装未完成'
@@ -116,6 +136,14 @@ class Setup:
 
 
 def main():
+    global UPDATE_ARGS
+    import argparse
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--update-destination');parser.add_argument('--ready-file');parser.add_argument('--wait-pids')
+    args=parser.parse_args()
+    if args.update_destination:
+        if not args.ready_file or not args.wait_pids:raise ValueError('更新参数不完整')
+        UPDATE_ARGS=args
     import webview
     # One setup process per desktop session prevents competing preference writes.
     import ctypes

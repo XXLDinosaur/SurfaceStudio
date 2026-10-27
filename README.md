@@ -4,19 +4,25 @@
 
 **本地 PBR 材质管理器，让材质库与 Blender 创作工作流连接。**
 
-Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件夹，提供预览、搜索、分类、收藏、集合和对比，并通过配套 Blender 插件给模型或选中的面赋材质。青灰磨砂玻璃界面、一体化无边框窗口，无需登录账号或上传素材。
+Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件夹，提供预览、搜索、分类、收藏和对比，并通过配套 Blender 插件给模型或选中的面赋材质。青灰磨砂玻璃界面、一体化无边框窗口，无需登录账号或上传素材。
+
+## 1.5.0：Blender 材质反向入库与软件更新
+
+SS 1.5.0 / 插件 1.2.2 新增“添加到 SS”：直接保存到 SS 设置的位置（默认跟随当前材质库），自动进入“未分类”。保留静态节点、节点组及内嵌贴图，无需手动导出再导入，重装后重新添加目录即可使用。使用步骤、迁移方法与支持范围见 [Blender 自制材质保存指南](docs/blender-material-export.md)。
 
 ## 下载与启动
 
-从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.4.0-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
+1.5.0 加入了 GitHub 正式版本检查：在「材质库设置 → 软件更新」查看更新说明、下载校验后的安装包并确认安装。支持关闭自动检查；使用方式和发布签名流程见 [软件更新说明](docs/auto-update.md)。1.4.0 及更早版本需要先手动安装本版，以后才能在软件内更新。发现新版时，左下角材质库设置旁会显示“更新”。
 
-合集包含 **SS 1.4.0 自动安装器、Blender 连接插件 1.1.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
+从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.5.0-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
+
+合集包含 **SS 1.5.0 自动安装器、Blender 连接插件 1.2.2、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
 
 1. 完整解压合集，运行 `SurfaceStudio-Setup.exe`。
 2. 选择 SS 安装目录，勾选检测到的 Blender 版本。安装器会安装并启用配套插件、配置 SS 路径。
 3. 打开 SS，在 **材质库设置** 中选择包含材质子文件夹的根目录并扫描。导入前请阅读 **[目录层级与格式说明](docs/import-materials.md)**，避免选错目录后扫描为 0。
 
-要求 Windows 10 / 11 x64 和 Microsoft Edge WebView2 Runtime。自动安装支持已验证的 Blender **4.2、4.3、5.1、5.2 正式版系列**；自定义或便携安装可手动选择 `blender.exe`。其他版本暂不自动安装。WebView2 可从 [Microsoft 官方页面](https://developer.microsoft.com/microsoft-edge/webview2/) 获取。
+要求 Windows 10 / 11 x64 和 Microsoft Edge WebView2 Runtime。自动安装支持已验证的 Blender **4.2、4.3、4.4、4.5 LTS、5.0、5.1、5.2 正式版系列**；自定义或便携安装可手动选择 `blender.exe`。其他版本暂不自动安装。WebView2 可从 [Microsoft 官方页面](https://developer.microsoft.com/microsoft-edge/webview2/) 获取。
 
 **已有用户更新**：先关闭 Blender，并退出旧 SS 后台进程，再运行安装器，选择原 SS 目录。保留 `data` 文件夹；安装器会保留数据并备份旧程序和插件设置。详见 [安装说明](INSTALLER.md)。
 
@@ -79,7 +85,7 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 | 外观 | 浅色 / 深色，标准 / 舒适 / 大字字号 |
 | Blender | Principled PBR 节点、对象或选中面赋材质、自动 UV、可选凹凸 |
 
-顶部空白处拖动窗口，双击最大化或还原；右上角控制最小化、最大化和关闭。`Ctrl+K` 聚焦搜索，`Esc` 关闭详情或弹层。非输入状态下按 `F` 收藏当前材质。“精选专题”默认收起，卡片大小和阅读字号独立设置。
+顶部空白处拖动窗口，双击最大化或还原；右上角控制最小化、最大化和关闭。`Ctrl+K` 聚焦搜索，`Esc` 关闭详情或弹层。非输入状态下按 `F` 收藏当前材质。卡片大小和阅读字号独立设置。
 
 ## 素材目录
 
@@ -114,7 +120,7 @@ Windows 桌面客户端和配套 Blender 插件都需要更新。启用插件并
 
 目标赋予、撤销及视口射线检测有自动化测试；完整的跨窗口鼠标手势已通过 Blender 4.2.4 LTS 用户手动验收，详见 [拖拽验证记录](DRAG-DROP.md)。GitHub 旧版便携包不会自动升级。
 
-安装与插件功能已在 Blender 4.2.4、4.2.9、4.3.0、5.1.2、5.2.0 验证。完整跨窗口拖放由用户在 4.2.4 LTS 手动验收；其他版本尚未逐一手测完整鼠标操作。以下为不使用自动安装器时的手动安装方法。
+安装与插件功能已在 Blender 4.2.4、4.2.9、4.3.0、4.4.3、4.5.15 LTS、5.0.1、5.1.2、5.2.0 验证。完整跨窗口拖放由用户在 4.2.4 LTS 手动验收；其他版本尚未逐一手测完整鼠标操作。以下为不使用自动安装器时的手动安装方法。
 
 1. 从 Release 下载 `surface_studio_bridge.zip`。
 2. Blender → 编辑 → 偏好设置 → 插件 → 从磁盘安装，选择 ZIP 并启用。
@@ -216,3 +222,5 @@ Copyright (C) 2026 XXLDinosaur。项目原创代码（包括 SS 客户端和配�
 - 软件按现状提供，不作担保。上述为便于理解的摘要，以 LICENSE 完整条款为准。
 
 第三方依赖保留各自的版权和许可证，本项目许可不替代它们的条款。用户自己的材质、贴图和项目文件不属于本项目的许可范围。图标基于设计参考经 AI 辅助制作；软件名称和标识不代表对修改版的官方认可。本项目与 Quixel / Epic Games / Blender Foundation 无隶属关系。
+
+新增版本的测试范围与限制见 [Blender 兼容性补测](docs/blender-compatibility.md)。

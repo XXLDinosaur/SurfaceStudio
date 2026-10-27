@@ -8,7 +8,9 @@ from urllib.parse import urlparse, parse_qs, unquote
 from PIL import Image, ImageOps
 from blender_bridge import BlenderBridge
 import organizer
+import material_names
 from normal_library import scan_normals
+from blender_library import scan_blender_materials
 from types import SimpleNamespace
 
 BASE = Path(__file__).resolve().parent
@@ -23,7 +25,7 @@ PORT = int(os.environ.get('SURFACE_STUDIO_PORT', '47831'))
 TOKEN = secrets.token_urlsafe(32)
 LOCK = threading.RLock()
 THUMB_LOCK = threading.Semaphore(4)
-CATEGORIES = {'Concrete':'混凝土','Soil':'土壤','Grass':'草地','Rock':'岩石','Fabric':'织物','Imperfections':'瑕疵纹理','Ground':'地表','Floors':'地板','Asphalt':'沥青','Sand':'沙地','Debris':'碎屑','Creature':'生物','Construction':'建筑','Metal':'金属','Paper':'纸张','Wood':'木材','Road':'道路','Brick':'砖墙','Wall':'墙面','Tree':'树皮','Misc':'杂项','Plaster':'灰泥','Moss':'苔藓','Stone':'石材','Other':'其他','Climber':'藤蔓','Plants':'植物','Edible':'食物','Leaf':'叶片','NormalOnly':'法线贴图'}
+CATEGORIES = {'Concrete':'混凝土','Soil':'土壤','Grass':'草地','Rock':'岩石','Fabric':'织物','Imperfections':'瑕疵纹理','Ground':'地表','Floors':'地板','Asphalt':'沥青','Sand':'沙地','Debris':'碎屑','Creature':'生物','Construction':'建筑','Metal':'金属','Paper':'纸张','Wood':'木材','Road':'道路','Brick':'砖墙','Wall':'墙面','Tree':'树皮','Misc':'杂项','Plaster':'灰泥','Moss':'苔藓','Stone':'石材','Other':'其他','Climber':'藤蔓','Plants':'植物','Edible':'食物','Leaf':'叶片','NormalOnly':'法线贴图','Blender':'Blender 材质','Uncategorized':'未分类'}
 WORDS = {'rough':'粗糙','smooth':'光滑','coarse':'粗粒','fine':'细腻','cracked':'开裂','cracks':'裂纹','damaged':'破损','old':'老旧','painted':'涂漆','dirty':'脏污','clean':'干净','dry':'干燥','dried':'干燥','wet':'潮湿','mossy':'苔藓','moss':'苔藓','forest':'森林','gravel':'砾石','pebbles':'卵石','mud':'泥土','sandy':'沙质','snow':'雪','red':'红色','green':'绿色','blue':'蓝色','grey':'灰色','gray':'灰色','white':'白色','black':'黑色','brown':'棕色','yellow':'黄色','rusty':'锈蚀','rust':'铁锈','rusted':'锈蚀','brick':'砖','bricks':'砖','marble':'大理石','granite':'花岗岩','tiles':'瓷砖','tile':'瓷砖','wood':'木','wooden':'木质','planks':'木板','asphalt':'沥青','concrete':'混凝土','leather':'皮革','fabric':'织物','rock':'岩石','stone':'石材','sandstone':'砂岩','limestone':'石灰岩','ground':'地面','soil':'土壤','grass':'草地','metal':'金属','paper':'纸','bark':'树皮','floor':'地板','wall':'墙','road':'道路','cliff':'峭壁','beach':'海滩','leaves':'落叶','cobblestone':'鹅卵石','pavement':'路面','plaster':'灰泥','dirt':'泥土','debris':'碎屑','surface':'表面'}
 
 def read_json(path, default):
@@ -63,9 +65,9 @@ def categorized_library():
                       'normalOnly': normal_only,
                       'automaticCategory': source['category'], 'manualCategory': source['id'] in edits['assignments']})
     counts = Counter(a['category'] for a in items)
-    categories = [{'id': k, 'name': catalog[k], 'count': counts[k]} for k in dict.fromkeys([*counts, *edits['custom']])]
-    categories.sort(key=lambda c: -c['count'])
-    return {**INDEX, 'assets': items, 'categories': categories,
+    categories = [{'id': k, 'name': catalog[k], 'count': counts[k]} for k in dict.fromkeys([*counts, 'Uncategorized', *edits['custom']])]
+    categories.sort(key=lambda c: (c['id']!='Uncategorized',-c['count']))
+    return {**INDEX, 'assets': items, 'categories': categories, 'materialSaveRoot':CONFIG.get('materialSaveRoot',''), 'effectiveMaterialSaveRoot':CONFIG.get('materialSaveRoot') or CONFIG['root'],
             'categoryOptions': [{'id': k, 'name': v} for k, v in catalog.items()]}
 
 def edit_category(body):
@@ -120,11 +122,11 @@ def scan():
         result, warnings = [], []
         normal_root = CONFIG.get('normalRoot', '')
         for folder in sorted(root.iterdir()):
-            if not folder.is_dir(): continue
+            if not folder.is_dir() or folder.name.startswith('.') or (folder/'surface-material.json').exists(): continue
             if normal_root and folder.resolve().is_relative_to(Path(normal_root).resolve()): continue
             try:
                 files = [f for f in folder.iterdir() if f.is_file()]
-                meta_file = next((f for f in files if f.suffix.lower() == '.json'), None)
+                meta_file = next((f for f in files if f.suffix.lower() == '.json' and not f.name.startswith('.')), None)
                 meta = read_json(meta_file, {}) if meta_file else {}
                 image_files = [f for f in files if f.suffix.lower() in ('.jpg','.jpeg','.png','.exr','.tif','.tiff')]
                 if not image_files: continue
@@ -145,12 +147,16 @@ def scan():
                 ident = hashlib.sha1(folder.name.encode()).hexdigest()[:16]
                 details = {m['key']:m.get('value') for m in meta.get('meta',[]) if isinstance(m,dict) and 'key' in m}
                 item = {'id':ident,'name':display,'folder':folder.name,'assetId':str(meta.get('id') or (meta_file.stem if meta_file else ident)),'category':cat,'categoryZh':CATEGORIES[cat],'tags':tags,'categories':cats,'search':translated,'resolution':(resolution.group(1)+'K') if resolution else '—','preview':preview.name,'maps':maps,'bytes':sum(f.stat().st_size for f in files),'modified':folder.stat().st_mtime,'meta':details}
+                item=material_names.apply_metadata(item,folder/'.surface-studio.json')
+                if item['category'] not in CATEGORIES:item['category']=cat
+                item['categoryZh']=CATEGORIES[item['category']]
                 result.append(item)
             except (OSError,ValueError,TypeError) as exc: warnings.append(f'{folder.name}: {exc}')
         if normal_root: result.extend(scan_normals(normal_root, warnings))
+        result.extend(scan_blender_materials([str(root), *CONFIG.get('blenderRoots',[]), *([CONFIG['materialSaveRoot']] if CONFIG.get('materialSaveRoot') else [])], warnings))
         if not result: warnings.append('未找到可导入素材：普通库需要“库/材质文件夹/贴图”结构；单张法线请使用法线贴图库。支持 JPG、JPEG、PNG、TIF、TIFF、EXR。')
         counts = Counter(a['category'] for a in result)
-        new_index = {'assets':result,'categories':[{'id':k,'name':CATEGORIES[k],'count':v} for k,v in counts.most_common()],'root':str(root),'normalRoot':normal_root,'scannedAt':time.time(),'totalBytes':sum(a['bytes'] for a in result),'warnings':warnings}
+        new_index = {'assets':result,'categories':[{'id':k,'name':CATEGORIES[k],'count':v} for k,v in counts.most_common()],'root':str(root),'normalRoot':normal_root,'blenderRoots':CONFIG.get('blenderRoots',[]),'materialSaveRoot':CONFIG.get('materialSaveRoot',''),'scannedAt':time.time(),'totalBytes':sum(a['bytes'] for a in result),'warnings':warnings}
         with LOCK:
             INDEX = new_index
             ASSETS = {a['id']:a for a in result}
@@ -163,9 +169,11 @@ def asset_file(ident, name):
     a = ASSETS.get(ident)
     if not a: raise ValueError('材质不存在')
     allowed = {a['preview']} | {m['name'] for m in a['maps']}
+    if a.get('kind') == 'blend': allowed.add(a['blendFile'])
     if name not in allowed: raise ValueError('文件不存在')
     root = Path(a.get('sourceRoot') or INDEX['root']).resolve()
-    if a.get('sourceRoot') and str(root) != str(Path(INDEX.get('normalRoot') or INDEX['root']).resolve()): raise ValueError('素材来源不匹配，请重新扫描')
+    allowed_roots = [INDEX['root'], *INDEX.get('blenderRoots',[]), *([INDEX['materialSaveRoot']] if INDEX.get('materialSaveRoot') else [])] if a.get('kind') == 'blend' else [INDEX.get('normalRoot') or INDEX['root']]
+    if a.get('sourceRoot') and root not in [Path(r).resolve() for r in allowed_roots]: raise ValueError('素材来源不匹配，请重新扫描')
     path = (root / a['folder'] / name).resolve()
     if not path.is_relative_to(root): raise ValueError('无效路径')
     return path
@@ -196,7 +204,7 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == '/api/status': return self.send({'scanning':SCANNING,'error':SCAN_ERROR,'count':len(ASSETS)})
             if url.path == '/api/state': return self.send(STATE)
             if url.path == '/api/blender/status':
-                return self.send({'sessions': BRIDGE.sessions(), 'protocol': 1})
+                return self.send({'sessions': BRIDGE.sessions(), 'protocol': 1, 'scannedAt':INDEX.get('scannedAt')})
             if url.path == '/api/blender/result':
                 return self.send(BRIDGE.result(q.get('id', [''])[0]))
             if url.path == '/api/image':
@@ -237,6 +245,10 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 organizer.recover(SimpleNamespace(**globals()))
                 if endpoint == '/api/organize': return self.send(organizer.handle(SimpleNamespace(**globals()),body))
+                if endpoint == '/api/material/rename': return self.send(material_names.rename_material(__import__(__name__),body.get('id'),body.get('name')))
+                if endpoint == '/api/blender/connect':
+                    BRIDGE.write(BRIDGE.root/'connect-request.json',{'id':secrets.token_hex(16),'created':time.time(),'expires':time.time()+15})
+                    return self.send({'ok':True})
                 if endpoint == '/api/categories': return self.send(edit_category(body))
                 if endpoint in ('/api/blender/apply', '/api/blender/drop'):
                     a = ASSETS.get(body.get('asset'))
@@ -248,6 +260,9 @@ class Handler(BaseHTTPRequestHandler):
                         maps.append({**m, 'path': str(path)})
                     manifest = {'id': a['id'], 'name': a['name'], 'assetId': a['assetId'],
                                 'root': a.get('sourceRoot') or INDEX['root'], 'folder': a['folder'], 'maps': maps}
+                    if a.get('kind') == 'blend':
+                        manifest['kind'] = 'blend'
+                        manifest['native'] = {'path':str(asset_file(a['id'],a['blendFile'])), 'materialName':a['materialName'], 'blenderVersion':a['blenderVersion']}
                     if endpoint == '/api/blender/drop':
                         return self.send(BRIDGE.prepare_drop(manifest, body.get('options', {})))
                     return self.send(BRIDGE.enqueue(body.get('session'), manifest,
@@ -265,6 +280,14 @@ class Handler(BaseHTTPRequestHandler):
                     path = asset_file(a['id'],a['preview']).parent
                     os.startfile(str(path))
                     return self.send({'ok':True})
+                if endpoint == '/api/blender/library-source':
+                    directory = body.get('directory')
+                    if not isinstance(directory,str) or not Path(directory).is_absolute() or not Path(directory).is_dir(): raise ValueError('请选择有效的 Blender 材质存放目录')
+                    known = [CONFIG['root'], *CONFIG.get('blenderRoots',[])]
+                    if CONFIG.get('materialSaveRoot'): known.append(CONFIG['materialSaveRoot'])
+                    covered = any(Path(directory).resolve().is_relative_to(Path(p).resolve()) for p in known)
+                    body = {} if covered else {'blenderRoots':[*CONFIG.get('blenderRoots',[]),directory]}
+                    endpoint = '/api/rescan'
                 if endpoint == '/api/rescan':
                     if SCANNING: raise ValueError('正在扫描，请稍候')
                     root=body.get('root',CONFIG['root'])
@@ -276,6 +299,23 @@ class Handler(BaseHTTPRequestHandler):
                         if not Path(normal_root).is_dir(): raise ValueError('法线贴图库路径不存在，请输入完整文件夹路径')
                         normal_root=str(Path(normal_root).resolve())
                         if Path(root).resolve().is_relative_to(Path(normal_root)): raise ValueError('法线贴图库应使用独立文件夹，不能包含普通素材库')
+                    blender_roots = body.get('blenderRoots',CONFIG.get('blenderRoots',[]))
+                    if not isinstance(blender_roots,list) or len(blender_roots)>32: raise ValueError('Blender 材质目录最多 32 个')
+                    validated_roots=[]
+                    for source in blender_roots:
+                        if not isinstance(source,str) or not Path(source).is_absolute() or not Path(source).is_dir(): raise ValueError('Blender 材质库路径不存在，请填写完整目录')
+                        resolved=str(Path(source).resolve())
+                        if normal_root and (Path(resolved).is_relative_to(Path(normal_root)) or Path(normal_root).is_relative_to(Path(resolved))): raise ValueError('Blender 材质库不能与纯法线目录重叠')
+                        if os.path.normcase(resolved) not in [os.path.normcase(v) for v in validated_roots]: validated_roots.append(resolved)
+                    save_root = body.get('materialSaveRoot',CONFIG.get('materialSaveRoot',''))
+                    if not isinstance(save_root,str): raise ValueError('材质保存位置无效')
+                    save_root=save_root.strip()
+                    if save_root:
+                        if not Path(save_root).is_absolute() or not Path(save_root).is_dir(): raise ValueError('材质保存位置不存在，请填写完整文件夹路径')
+                        save_root=str(Path(save_root).resolve())
+                        if normal_root and (Path(save_root).is_relative_to(Path(normal_root)) or Path(normal_root).is_relative_to(Path(save_root))): raise ValueError('材质保存位置不能与纯法线目录重叠')
+                    CONFIG['materialSaveRoot']=save_root
+                    CONFIG['blenderRoots']=validated_roots
                     CONFIG['root']=str(Path(root).resolve())
                     CONFIG['normalRoot']=normal_root
                     save_json(DATA / 'config.json',CONFIG)
@@ -286,7 +326,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     saved=read_json(DATA / 'index.json',None)
-    if saved and saved.get('root')==CONFIG['root'] and saved.get('normalRoot','')==CONFIG.get('normalRoot',''):
+    if saved and saved.get('root')==CONFIG['root'] and saved.get('normalRoot','')==CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==CONFIG.get('materialSaveRoot',''):
         INDEX=saved; ASSETS={a['id']:a for a in INDEX['assets']}
     else: scan()
     print(f'Surface Studio http://127.0.0.1:{PORT} | {len(ASSETS)} materials',flush=True)

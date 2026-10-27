@@ -6,24 +6,6 @@
   document.querySelector('.main-shell').insertBefore(controls, $('#scroll-area'));
   for (const selector of ['.library-tabs', '.toolbar', '#advanced-filters', '#active-filters']) controls.append($(selector));
   $('.tab-caption').textContent = '浏览 · 筛选 · 赋予';
-  const featuredToggle = document.createElement('button');
-  featuredToggle.className = 'outline-button';
-  featuredToggle.id = 'featured-toggle';
-  featuredToggle.setAttribute('aria-controls', 'featured');
-  $('.tabs').append(featuredToggle);
-  function syncFeatured() {
-    featuredToggle.textContent = prefs.showFeatured ? '收起专题' : '精选专题';
-    featuredToggle.setAttribute('aria-expanded', String(!!prefs.showFeatured));
-    if (library) renderResults(true);
-  }
-  featuredToggle.onclick = () => {
-    const expand = $('#featured').hidden;
-    preference('showFeatured', expand);
-    if (expand && library) navigate();
-    syncFeatured(); $('#scroll-area').scrollTop = 0;
-  };
-  syncFeatured();
-
   const density = document.createElement('select');
   density.id = 'density-preset'; density.setAttribute('aria-label', '卡片大小');
   density.innerHTML = '<option value="190">紧凑</option><option value="230">标准</option><option value="300">大图</option><option value="custom" hidden>自定义</option>';
@@ -42,8 +24,6 @@
   clear.onclick = () => $('#reset-filters').click();
   $('.toolbar').append(clear);
   function syncFilters() {
-    featuredToggle.textContent = $('#featured').hidden ? '精选专题' : '收起专题';
-    featuredToggle.setAttribute('aria-expanded', String(!$('#featured').hidden));
     const active = ['search','map-filter','resolution-filter'].some(id => $('#'+id).value) || $('#tileable-filter').checked;
     clear.hidden = !active;
     $('#map-filter').classList.toggle('has-value', !!$('#map-filter').value);
@@ -67,10 +47,5 @@
   document.addEventListener('keydown', e => {if(e.key==='Escape') appearance.open=false;});
   $('#reading-settings').addEventListener('click', () => {appearance.open=false;});
 
-  const libraryInfo=document.createElement('details');
-  libraryInfo.className='library-info';
-  libraryInfo.innerHTML='<summary>本地材质库 <span>路径与容量</span></summary>';
-  libraryInfo.append($('.storage'));
-  $('.sidebar-bottom').prepend(libraryInfo);
   $('#settings').innerHTML=icon('settings')+'材质库设置';
 })();

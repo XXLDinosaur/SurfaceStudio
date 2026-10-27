@@ -1,18 +1,32 @@
 /* Local Blender bridge. Material operations execute in Blender, never in the browser. */
 (() => {
-  let sessions = [], selectedSession = '', busy = false, lastAsset = '', pollTimer;
+  let sessions = [], selectedSession = '', busy = false, lastAsset = '', pollTimer, refreshingLibrary = false;
   let importOptions = {repeat:1, autoUV:true, ao:true, bump:false, flipNormalY:false};
   try { importOptions = {...importOptions, ...JSON.parse(localStorage.getItem('surface-blender-options') || '{}')}; } catch {}
   const connection = document.createElement('button');
   connection.className = 'blender-connection'; connection.id = 'blender-connection';
-  connection.title = '查看 Blender 连接方法';
+  connection.title = '连接已打开的 Blender';
   connection.innerHTML = '<span class="blender-dot"></span>Blender <span class="connection-caption">未连接</span>';
   document.querySelector('.topbar-right').prepend(connection);
   function help() {
     modal('在 Blender 中使用你的材质库', `<p class="modal-description">在 Windows 桌面客户端按住材质球，拖到 Blender 视口的模型表面松开，即可给落点模型赋材质，无需预先选中。需要插件 1.1.0+ 和对象模式。也可选中模型后点击「赋予到 Blender」。</p><ol class="bridge-steps"><li>Blender 的 3D 视图中按 <b>N</b> 打开侧栏。</li><li>选择 <b>Surface Studio</b> 标签，点击「打开材质库」。</li><li>回到这里选材质，检查目标模型，然后点击「赋予到 Blender」。</li></ol><div class="bridge-help-note">对象模式会覆盖选中模型各面的材质分配；编辑模式只作用于选中的面。原材质仍保留在材质槽，Blender 中可按 Ctrl + Z 撤销。</div><p class="form-note">没有 Surface Studio 标签？安装软件目录中的 surface_studio_bridge.zip：编辑 → 偏好设置 → 插件 → 从磁盘安装，然后启用 Surface Studio。兼容 Blender 4.2 及以上版本。</p><div class="modal-actions"><button class="primary-button" id="bridge-help-done">知道了</button></div>`, 'BLENDER LIVE LINK');
     document.querySelector('#bridge-help-done').onclick = () => document.querySelector('#modal').close();
   }
-  connection.onclick = help;
+  connection.onclick = async () => {
+    if(connection.disabled)return;
+    connection.disabled=true;
+    connection.querySelector('.connection-caption').textContent='连接中…';
+    try {
+      await post('/api/blender/connect');
+      const deadline=Date.now()+12000;
+      while(Date.now()<deadline){
+        const response=await fetch('/api/blender/status');const data=await response.json();
+        if(data.sessions?.length){sessions=data.sessions;updateStatus();toast('已连接 Blender');return}
+        await new Promise(resolve=>setTimeout(resolve,700));
+      }
+      toast('未发现可连接的 Blender，请打开 Blender 并启用配套插件 1.2.2 或更新版本');
+    }catch(e){toast(e.message)}finally{connection.disabled=false;updateStatus()}
+  };
   function activeSession() { return sessions.find(s => s.id === selectedSession) || sessions[0]; }
   function statusText(session) {
     if (!session) return '在 Blender 侧栏中点击「打开材质库」以连接';
@@ -54,6 +68,7 @@
     panel.querySelector('#blender-help').onclick = help;
     panel.querySelector('#blender-session').onchange = e => {selectedSession = e.target.value; updateStatus();};
     panel.querySelector('#send-blender').onclick = send;
+    if(byId.get(selected)?.kind==='blend'){panel.querySelector('.blender-options summary').textContent='导入选项（原生节点保持不变）';for(const id of ['blender-repeat','blender-ao','blender-bump','blender-flipNormalY'])panel.querySelector('#'+id).closest('label').hidden=true;panel.querySelector('.blender-options-body p').textContent='平铺与法线方向沿用材质原始节点设置。需要连接插件 1.2.0 或更新版本。';}
     updateStatus();
   }
   async function send() {
@@ -101,6 +116,7 @@
       if (!response.ok) throw Error('offline');
       const data = await response.json();
       sessions = data.sessions || [];
+      if(library && data.scannedAt && data.scannedAt!==library.scannedAt && !refreshingLibrary){refreshingLibrary=true;try{await load()}finally{refreshingLibrary=false}}
       if (!sessions.some(s => s.id === selectedSession)) selectedSession = sessions[0]?.id || '';
     } catch { sessions = []; }
     updateStatus();

@@ -13,6 +13,48 @@ class WindowControls:
         self._window = None
         self._maximized = False
 
+    def _updates(self):
+        if not hasattr(self, '_updater'):
+            from updater import Updater
+            self._updater=Updater(ROOT)
+        return self._updater
+
+    def update_status(self): return self._updates().status()
+    def check_updates(self): return self._updates().check()
+    def set_auto_updates(self, enabled): return self._updates().set_auto(enabled)
+    def download_update(self): return self._updates().download()
+
+    def install_update(self):
+        import installer_core as core
+        import time, uuid
+        updater=self._updates()
+        if not updater.lock.acquire(False): return {'error':'更新正在处理中'}
+        try:
+            if not getattr(sys,'frozen',False):raise ValueError('请使用桌面安装版进行自动更新')
+            if any(p['Name'].lower()=='blender.exe' for p in core.processes()):raise ValueError('请保存工程并关闭 Blender，再点击安装更新')
+            package=updater.verified_package()
+            ready=updater.folder/('handoff-'+uuid.uuid4().hex+'.json')
+            command=[str(package),'--update-destination',str(ROOT),'--ready-file',str(ready),'--wait-pids',str(os.getpid())+','+str(os.getppid())]
+            child=core.spawn(command,cwd=str(package.parent))
+            updater.state.update(phase='handoff',message='正在启动更新安装器…')
+            def handoff():
+                try:
+                    for _ in range(120):
+                        if ready.is_file():
+                            ready.unlink(missing_ok=True)
+                            self._window.destroy()
+                            return
+                        if child.poll() is not None:raise RuntimeError('更新安装器启动失败，SS 已保持运行')
+                        time.sleep(.25)
+                    raise RuntimeError('更新安装器未就绪，请稍后重试')
+                except Exception as exc:updater.state.update(phase='ready',message=str(exc))
+                finally:updater.lock.release()
+            threading.Thread(target=handoff,daemon=True).start()
+            return {'ok':True}
+        except Exception as exc:
+            updater.lock.release()
+            return {'error':str(exc)}
+
     def minimize(self):
         self._window.minimize()
 
@@ -142,7 +184,7 @@ def run_primary(instance):
         return
     import server
     saved=server.read_json(server.DATA/'index.json',None)
-    if saved and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot',''):
+    if saved and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==server.CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==server.CONFIG.get('materialSaveRoot',''):
         server.INDEX=saved
         server.ASSETS={a['id']:a for a in saved['assets']}
     else: server.scan()

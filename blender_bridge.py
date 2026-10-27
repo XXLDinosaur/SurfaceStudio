@@ -71,6 +71,8 @@ class BlenderBridge:
         session = next((s for s in self.sessions() if s['id'] == session_id), None)
         if not session:
             raise ValueError('Blender 未连接。请在 Blender 的 Surface Studio 侧栏点击连接。')
+        if manifest.get('kind') == 'blend' and not session.get('nativeMaterials'):
+            raise ValueError('请先将 Blender 连接插件更新到 1.2.0 或更新版本')
         if session.get('revision') != expected_revision:
             raise ValueError('Blender 中的选择已变化，请确认目标模型后重新点击赋予')
         if not session.get('objects'):
