@@ -6,7 +6,7 @@
     badge.hidden=!['available','ready'].includes(status?.phase);
     if(!$('#update-state'))return;
     $('#update-state').textContent=status?.message||'请在桌面版 SS 中检查更新';
-    $('#update-current').textContent=status?.current||'1.5.0';
+    $('#update-current').textContent=status?.current||library?.releaseNotes?.version||'—';
     $('#update-notes').textContent=status?.notes||'';
     $('#update-auto').checked=status?.autoCheck!==false;
     $('#update-auto').disabled=!api;
@@ -17,7 +17,7 @@
   }
   async function refresh(){if(!api||polling)return;polling=true;try{status=await api.update_status();render()}catch{}finally{polling=false}}
   window.openUpdates=()=>{
-    modal('软件更新',`<p class="modal-description">当前版本 <b id="update-current">1.5.0</b> · GitHub 正式版本</p><label class="check-label"><input type="checkbox" id="update-auto">自动检查更新（安装前由你确认）</label><p id="update-state" class="form-note" role="status"></p><pre id="update-notes" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;font:inherit;font-size:var(--read-secondary)"></pre><p class="form-note">更新会保留材质库路径及整理记录。安装前请保存并关闭 Blender，以便同时更新插件；SS 会在安装器就绪后退出。</p><div class="modal-actions"><button id="update-check" class="outline-button">检查更新</button><button id="update-install" class="primary-button" hidden>下载更新</button></div>`,'SURFACE STUDIO UPDATE');
+    modal('软件更新',`<p class="modal-description">当前版本 <b id="update-current">—</b> · GitHub 正式版本</p><label class="check-label"><input type="checkbox" id="update-auto">自动检查更新（安装前由你确认）</label><p id="update-state" class="form-note" role="status"></p><pre id="update-notes" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;font:inherit;font-size:var(--read-secondary)"></pre><p class="form-note">更新会保留材质库路径及整理记录。安装前请保存并关闭 Blender，以便同时更新插件；SS 会在安装器就绪后退出。</p><div class="modal-actions"><button id="update-check" class="outline-button">检查更新</button><button id="update-install" class="primary-button" hidden>下载更新</button></div>`,'SURFACE STUDIO UPDATE');
     $('#update-check').onclick=async()=>{try{status=await api.check_updates();render()}catch(e){toast(e.message)}};
     $('#update-auto').onchange=async e=>{status=await api.set_auto_updates(e.target.checked);render()};
     $('#update-install').onclick=async()=>{

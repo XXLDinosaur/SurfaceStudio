@@ -29,7 +29,7 @@ class Setup:
             from update_handoff import validate_destination
             destination,ready=validate_destination(UPDATE_ARGS.update_destination,UPDATE_ARGS.ready_file)
             ready.write_text(json.dumps({'ready':True}),encoding='utf-8')
-        return {'destination': str(destination), 'ss_version': '1.5.0', 'addon_version': '1.2.2', 'updateMode':bool(UPDATE_ARGS)}
+        return {'destination': str(destination), 'ss_version': '1.6.0', 'addon_version': '1.3.0', 'updateMode':bool(UPDATE_ARGS)}
 
     def auto_update(self):
         if not UPDATE_ARGS:return {'error':'不是更新模式'}
@@ -115,7 +115,7 @@ class Setup:
             self._status['stage'] = '安装完成' if all(r['ok'] for r in results) else 'SS 已安装，部分项目需要处理后重试'
             report = executable.parent/'data/installer-report.json'
             report.parent.mkdir(parents=True, exist_ok=True)
-            report.write_text(json.dumps({'software': '1.5.0', 'addon': '1.2.2', 'results': results}, ensure_ascii=False, indent=2), encoding='utf-8')
+            report.write_text(json.dumps({'software': '1.6.0', 'addon': '1.3.0', 'results': results}, ensure_ascii=False, indent=2), encoding='utf-8')
             return {'results': results, 'installed': str(executable)}
         except Exception as exc:
             self._status['stage'] = '安装未完成'

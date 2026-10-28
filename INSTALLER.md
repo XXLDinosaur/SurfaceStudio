@@ -1,6 +1,6 @@
 # Surface Studio 安装与 Blender 自动连接
 
-当前版本：SS 1.5.0 + Blender 插件 1.2.2。更新后支持将材质球从 Windows 桌面客户端拖到 Blender 视口中的网格上；需要对象模式，可 Ctrl+Z 撤销。旧版插件 1.0.0 不支持拖放；本安装器会更新到配套插件 1.2.2。
+当前版本：SS 1.6.0 + Blender 插件 1.3.0。更新后支持将材质球从 Windows 桌面客户端拖到 Blender 视口中的网格上；需要对象模式，可 Ctrl+Z 撤销。旧版插件 1.0.0 不支持拖放；本安装器会更新到配套插件 1.3.0。
 
 本版已在 Blender 4.2.4 LTS 完成用户手动跨窗口拖放验收；目标模型赋予、撤销和视口落点检测已做分项测试。其他版本完整手势尚未逐一手测。网页访问不支持原生拖出。
 
@@ -60,3 +60,7 @@
 先在 SS 材质库设置中确认“Blender 添加材质的保存位置”，留空默认跟随当前材质库。保持 SS 运行，Blender 中选中物体的活动材质，在 N 侧栏 → Surface Studio → 添加到 SS，即可直接保存并进入“未分类”，无需手动导出或再次添加目录。每个材质自动生成 material.blend（内嵌贴图）+ preview.png + surface-material.json，整包保留即可重装恢复。配套插件 1.2.2；原生材质需要保存时的 Blender 主次版本或更高版本。
 
 新增版本的测试范围与限制见 [Blender 兼容性补测](docs/blender-compatibility.md)。
+
+## 1.6.0：局部贴花
+
+在材质库设置填写贴花图库（每个文件夹包含 Albedo 和 Opacity/Mask）。从 SS 贴花分类拖到 Blender 模型表面后，创建独立贴花，保留原模型材质。选中贴花，在 N 侧栏的 Surface Studio → 贴花调整中控制尺寸、旋转、透明度和表面偏移；Ctrl+Z 撤销、X 删除。图集暂时整张使用，复杂转角需要调整。详见 docs/decals.md。

@@ -32,6 +32,7 @@ class UpdateTests(unittest.TestCase):
                 else:api._window.destroy.assert_not_called();self.assertEqual(manager.status()['phase'],'ready')
 
     def setUp(self):
+        installed=patch.object(u,'VERSION','1.5.0');installed.start();self.addCleanup(installed.stop)
         self.key=Ed25519PrivateKey.generate();self.pub=base64.b64encode(self.key.public_key().public_bytes(serialization.Encoding.Raw,serialization.PublicFormat.Raw)).decode();self.payload=b'MZ-isolated-installer-payload'
         self.data={'format':'surface-studio-update-v1','version':'1.6.0','asset':u.SETUP,'size':len(self.payload),'sha256':hashlib.sha256(self.payload).hexdigest()};self.raw=json.dumps(self.data).encode();self.sig=self.key.sign(self.raw)
         self.base='https://github.com/'+u.REPO+'/releases/download/v1.6.0/'

@@ -9,7 +9,10 @@ from PIL import Image, ImageOps
 from blender_bridge import BlenderBridge
 import organizer
 import material_names
+import asset_categories
+from release_notes import NOTES
 from normal_library import scan_normals
+from decal_library import scan_decals
 from blender_library import scan_blender_materials
 from types import SimpleNamespace
 
@@ -25,7 +28,8 @@ PORT = int(os.environ.get('SURFACE_STUDIO_PORT', '47831'))
 TOKEN = secrets.token_urlsafe(32)
 LOCK = threading.RLock()
 THUMB_LOCK = threading.Semaphore(4)
-CATEGORIES = {'Concrete':'混凝土','Soil':'土壤','Grass':'草地','Rock':'岩石','Fabric':'织物','Imperfections':'瑕疵纹理','Ground':'地表','Floors':'地板','Asphalt':'沥青','Sand':'沙地','Debris':'碎屑','Creature':'生物','Construction':'建筑','Metal':'金属','Paper':'纸张','Wood':'木材','Road':'道路','Brick':'砖墙','Wall':'墙面','Tree':'树皮','Misc':'杂项','Plaster':'灰泥','Moss':'苔藓','Stone':'石材','Other':'其他','Climber':'藤蔓','Plants':'植物','Edible':'食物','Leaf':'叶片','NormalOnly':'法线贴图','Blender':'Blender 材质','Uncategorized':'未分类'}
+CATEGORIES = {'Decal':'贴花','Concrete':'混凝土','Soil':'土壤','Grass':'草地','Rock':'岩石','Fabric':'织物','Imperfections':'瑕疵纹理','Ground':'地表','Floors':'地板','Asphalt':'沥青','Sand':'沙地','Debris':'碎屑','Creature':'生物','Construction':'建筑','Metal':'金属','Paper':'纸张','Wood':'木材','Road':'道路','Brick':'砖墙','Wall':'墙面','Tree':'树皮','Misc':'杂项','Plaster':'灰泥','Moss':'苔藓','Stone':'石材','Other':'其他','Climber':'藤蔓','Plants':'植物','Edible':'食物','Leaf':'叶片','NormalOnly':'法线贴图','Blender':'Blender 材质','Uncategorized':'未分类'}
+CATEGORIES.update(asset_categories.LABELS)
 WORDS = {'rough':'粗糙','smooth':'光滑','coarse':'粗粒','fine':'细腻','cracked':'开裂','cracks':'裂纹','damaged':'破损','old':'老旧','painted':'涂漆','dirty':'脏污','clean':'干净','dry':'干燥','dried':'干燥','wet':'潮湿','mossy':'苔藓','moss':'苔藓','forest':'森林','gravel':'砾石','pebbles':'卵石','mud':'泥土','sandy':'沙质','snow':'雪','red':'红色','green':'绿色','blue':'蓝色','grey':'灰色','gray':'灰色','white':'白色','black':'黑色','brown':'棕色','yellow':'黄色','rusty':'锈蚀','rust':'铁锈','rusted':'锈蚀','brick':'砖','bricks':'砖','marble':'大理石','granite':'花岗岩','tiles':'瓷砖','tile':'瓷砖','wood':'木','wooden':'木质','planks':'木板','asphalt':'沥青','concrete':'混凝土','leather':'皮革','fabric':'织物','rock':'岩石','stone':'石材','sandstone':'砂岩','limestone':'石灰岩','ground':'地面','soil':'土壤','grass':'草地','metal':'金属','paper':'纸','bark':'树皮','floor':'地板','wall':'墙','road':'道路','cliff':'峭壁','beach':'海滩','leaves':'落叶','cobblestone':'鹅卵石','pavement':'路面','plaster':'灰泥','dirt':'泥土','debris':'碎屑','surface':'表面'}
 
 def read_json(path, default):
@@ -54,21 +58,24 @@ def category_data():
 
 def categorized_library():
     _, _, edits = category_data()
-    catalog = {**CATEGORIES, **edits['custom'], **edits.get('names', {})}
+    catalog = {**CATEGORIES, **asset_categories.LABELS, **edits['custom'], **edits.get('names', {})}
     items = []
     for source in INDEX['assets']:
-        category = edits['assignments'].get(source['id'], source['category'])
+        automatic = asset_categories.automatic_category(source)
+        category = edits['assignments'].get(source['id'], automatic)
+        # Retain legacy records on disk, but retire the source-format category.
+        if category == 'Blender': category = 'Uncategorized'
         if category not in catalog: category = source['category']
         normal_only = bool(source.get('normalOnly') or source['maps'] and all(m['channel']=='Normal' for m in source['maps']))
         normal_preview = next((m['name'] for m in source['maps'] if m['channel']=='Normal' and m['ext']!='EXR'), next((m['name'] for m in source['maps'] if m['channel']=='Normal'),source['preview']))
         items.append({**source, 'preview': normal_preview if normal_only else source['preview'], 'category': category, 'categoryZh': catalog[category],
-                      'normalOnly': normal_only,
-                      'automaticCategory': source['category'], 'manualCategory': source['id'] in edits['assignments']})
+                      'normalOnly': normal_only, 'assetGroup':asset_categories.asset_group({**source,'normalOnly':normal_only}),
+                      'automaticCategory': automatic, 'manualCategory': source['id'] in edits['assignments']})
     counts = Counter(a['category'] for a in items)
     categories = [{'id': k, 'name': catalog[k], 'count': counts[k]} for k in dict.fromkeys([*counts, 'Uncategorized', *edits['custom']])]
     categories.sort(key=lambda c: (c['id']!='Uncategorized',-c['count']))
     return {**INDEX, 'assets': items, 'categories': categories, 'materialSaveRoot':CONFIG.get('materialSaveRoot',''), 'effectiveMaterialSaveRoot':CONFIG.get('materialSaveRoot') or CONFIG['root'],
-            'categoryOptions': [{'id': k, 'name': v} for k, v in catalog.items()]}
+            'categoryOptions': [{'id': k, 'name': v} for k, v in catalog.items() if k != 'Blender']}
 
 def edit_category(body):
     data, key, edits = category_data()
@@ -123,6 +130,7 @@ def scan():
         normal_root = CONFIG.get('normalRoot', '')
         for folder in sorted(root.iterdir()):
             if not folder.is_dir() or folder.name.startswith('.') or (folder/'surface-material.json').exists(): continue
+            if CONFIG.get('decalRoot') and folder.resolve().is_relative_to(Path(CONFIG['decalRoot']).resolve()): continue
             if normal_root and folder.resolve().is_relative_to(Path(normal_root).resolve()): continue
             try:
                 files = [f for f in folder.iterdir() if f.is_file()]
@@ -153,10 +161,11 @@ def scan():
                 result.append(item)
             except (OSError,ValueError,TypeError) as exc: warnings.append(f'{folder.name}: {exc}')
         if normal_root: result.extend(scan_normals(normal_root, warnings))
+        result.extend(scan_decals(CONFIG.get('decalRoot',''), warnings))
         result.extend(scan_blender_materials([str(root), *CONFIG.get('blenderRoots',[]), *([CONFIG['materialSaveRoot']] if CONFIG.get('materialSaveRoot') else [])], warnings))
         if not result: warnings.append('未找到可导入素材：普通库需要“库/材质文件夹/贴图”结构；单张法线请使用法线贴图库。支持 JPG、JPEG、PNG、TIF、TIFF、EXR。')
         counts = Counter(a['category'] for a in result)
-        new_index = {'assets':result,'categories':[{'id':k,'name':CATEGORIES[k],'count':v} for k,v in counts.most_common()],'root':str(root),'normalRoot':normal_root,'blenderRoots':CONFIG.get('blenderRoots',[]),'materialSaveRoot':CONFIG.get('materialSaveRoot',''),'scannedAt':time.time(),'totalBytes':sum(a['bytes'] for a in result),'warnings':warnings}
+        new_index = {'assets':result,'categories':[{'id':k,'name':CATEGORIES[k],'count':v} for k,v in counts.most_common()],'root':str(root),'normalRoot':normal_root,'decalRoot':CONFIG.get('decalRoot',''),'blenderRoots':CONFIG.get('blenderRoots',[]),'materialSaveRoot':CONFIG.get('materialSaveRoot',''),'scannedAt':time.time(),'totalBytes':sum(a['bytes'] for a in result),'warnings':warnings}
         with LOCK:
             INDEX = new_index
             ASSETS = {a['id']:a for a in result}
@@ -173,6 +182,7 @@ def asset_file(ident, name):
     if name not in allowed: raise ValueError('文件不存在')
     root = Path(a.get('sourceRoot') or INDEX['root']).resolve()
     allowed_roots = [INDEX['root'], *INDEX.get('blenderRoots',[]), *([INDEX['materialSaveRoot']] if INDEX.get('materialSaveRoot') else [])] if a.get('kind') == 'blend' else [INDEX.get('normalRoot') or INDEX['root']]
+    if a.get('kind') == 'decal': allowed_roots = [INDEX.get('decalRoot','')]
     if a.get('sourceRoot') and root not in [Path(r).resolve() for r in allowed_roots]: raise ValueError('素材来源不匹配，请重新扫描')
     path = (root / a['folder'] / name).resolve()
     if not path.is_relative_to(root): raise ValueError('无效路径')
@@ -200,7 +210,8 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == '/api/health': return self.send({'app':'Surface Studio','ready':True})
             if url.path == '/api/library':
                 with LOCK:
-                    return self.send({**categorized_library(),'state':STATE,'token':TOKEN,'scanning':SCANNING,'error':SCAN_ERROR})
+                    return self.send({**categorized_library(),'state':STATE,'token':TOKEN,'scanning':SCANNING,'error':SCAN_ERROR,
+                                      'releaseNotes':NOTES,'releaseNotesSeen':read_json(DATA/'release-notes.json',{}).get('seenVersion')==NOTES['version']})
             if url.path == '/api/status': return self.send({'scanning':SCANNING,'error':SCAN_ERROR,'count':len(ASSETS)})
             if url.path == '/api/state': return self.send(STATE)
             if url.path == '/api/blender/status':
@@ -243,6 +254,10 @@ class Handler(BaseHTTPRequestHandler):
             body=json.loads(self.rfile.read(length) or '{}')
             endpoint=urlparse(self.path).path
             with LOCK:
+                if endpoint == '/api/release-notes/seen':
+                    if body.get('version') != NOTES['version']:raise ValueError('版本号不匹配')
+                    save_json(DATA/'release-notes.json',{'seenVersion':NOTES['version']})
+                    return self.send({'ok':True})
                 organizer.recover(SimpleNamespace(**globals()))
                 if endpoint == '/api/organize': return self.send(organizer.handle(SimpleNamespace(**globals()),body))
                 if endpoint == '/api/material/rename': return self.send(material_names.rename_material(__import__(__name__),body.get('id'),body.get('name')))
@@ -260,6 +275,9 @@ class Handler(BaseHTTPRequestHandler):
                         maps.append({**m, 'path': str(path)})
                     manifest = {'id': a['id'], 'name': a['name'], 'assetId': a['assetId'],
                                 'root': a.get('sourceRoot') or INDEX['root'], 'folder': a['folder'], 'maps': maps}
+                    if a.get('kind') == 'decal':
+                        manifest['kind']='decal'
+                        if endpoint != '/api/blender/drop': raise ValueError('贴花请拖到 Blender 模型表面，原材质不会被替换')
                     if a.get('kind') == 'blend':
                         manifest['kind'] = 'blend'
                         manifest['native'] = {'path':str(asset_file(a['id'],a['blendFile'])), 'materialName':a['materialName'], 'blenderVersion':a['blenderVersion']}
@@ -292,12 +310,17 @@ class Handler(BaseHTTPRequestHandler):
                     if SCANNING: raise ValueError('正在扫描，请稍候')
                     root=body.get('root',CONFIG['root'])
                     if not isinstance(root,str) or not Path(root).is_dir(): raise ValueError('路径不存在，请输入完整的材质库文件夹路径')
+                    decal_root=body.get('decalRoot',CONFIG.get('decalRoot',''))
+                    if not isinstance(decal_root,str) or (decal_root.strip() and not Path(decal_root.strip()).is_dir()): raise ValueError('贴花库路径不存在')
+                    decal_root=str(Path(decal_root.strip()).resolve()) if decal_root.strip() else ''
+                    if decal_root and Path(decal_root)==Path(root).resolve(): raise ValueError('贴花库请使用独立目录，不与普通材质库相同')
                     normal_root=body.get('normalRoot',CONFIG.get('normalRoot',''))
                     if not isinstance(normal_root,str): raise ValueError('法线贴图库路径无效')
                     normal_root=normal_root.strip()
                     if normal_root:
                         if not Path(normal_root).is_dir(): raise ValueError('法线贴图库路径不存在，请输入完整文件夹路径')
                         normal_root=str(Path(normal_root).resolve())
+                        if decal_root and (Path(decal_root).is_relative_to(Path(normal_root)) or Path(normal_root).is_relative_to(Path(decal_root))): raise ValueError('贴花库不能与纯法线目录重叠')
                         if Path(root).resolve().is_relative_to(Path(normal_root)): raise ValueError('法线贴图库应使用独立文件夹，不能包含普通素材库')
                     blender_roots = body.get('blenderRoots',CONFIG.get('blenderRoots',[]))
                     if not isinstance(blender_roots,list) or len(blender_roots)>32: raise ValueError('Blender 材质目录最多 32 个')
@@ -318,6 +341,7 @@ class Handler(BaseHTTPRequestHandler):
                     CONFIG['blenderRoots']=validated_roots
                     CONFIG['root']=str(Path(root).resolve())
                     CONFIG['normalRoot']=normal_root
+                    CONFIG['decalRoot']=decal_root
                     save_json(DATA / 'config.json',CONFIG)
                     threading.Thread(target=scan,daemon=True).start()
                     return self.send({'ok':True})
@@ -326,7 +350,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     saved=read_json(DATA / 'index.json',None)
-    if saved and saved.get('root')==CONFIG['root'] and saved.get('normalRoot','')==CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==CONFIG.get('materialSaveRoot',''):
+    if saved and saved.get('decalRoot','')==CONFIG.get('decalRoot','') and saved.get('root')==CONFIG['root'] and saved.get('normalRoot','')==CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==CONFIG.get('materialSaveRoot',''):
         INDEX=saved; ASSETS={a['id']:a for a in INDEX['assets']}
     else: scan()
     print(f'Surface Studio http://127.0.0.1:{PORT} | {len(ASSETS)} materials',flush=True)

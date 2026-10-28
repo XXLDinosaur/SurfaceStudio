@@ -6,7 +6,7 @@ from urllib.parse import urlparse,quote
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from update_key import PUBLIC_KEY
 
-VERSION='1.5.0'
+VERSION='1.6.0'
 REPO='XXLDinosaur/SurfaceStudio'
 LATEST='https://api.github.com/repos/'+REPO+'/releases/latest'
 SETUP='SurfaceStudio-Setup.exe'

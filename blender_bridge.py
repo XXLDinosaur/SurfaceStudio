@@ -58,7 +58,7 @@ class BlenderBridge:
                 old.unlink(missing_ok=True)
         ident = secrets.token_hex(16)
         path = self.root/'drops'/(ident+'.ssmat')
-        self.write(path, {'app': 'SurfaceStudio', 'protocol': 1, 'id': ident,
+        self.write(path, {'app': 'SurfaceStudio', 'protocol': 2 if manifest.get('kind')=='decal' else 1, 'id': ident,
                           'created': now, 'expires': now+300, 'material': manifest, 'options': opts})
         self.write(self.root/'results'/(ident+'.json'),
                    {'id': ident, 'status': 'pending', 'created': now, 'expires': now+300,

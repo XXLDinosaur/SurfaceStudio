@@ -1,7 +1,7 @@
 bl_info = {
     'name': 'Surface Studio — 本地材质库',
     'author': 'Surface Studio',
-    'version': (1, 2, 2),
+    'version': (1, 3, 0),
     'blender': (4, 2, 0),
     'location': '3D Viewport > Sidebar > Surface Studio',
     'description': '打开 Surface Studio，将本地 PBR 材质一键赋予选中模型或选中的面',
@@ -150,7 +150,7 @@ def validate_job(job, target=None):
     if not math.isfinite(repeat) or not 0.01 <= repeat <= 100:
         raise ValueError('无效贴图平铺次数')
     for obj in objects:
-        if not obj.data.uv_layers and job.get('material',{}).get('kind') != 'blend':
+        if not obj.data.uv_layers and job.get('material',{}).get('kind') not in ('blend','decal'):
             if current['mode'] == 'EDIT_MESH' or not opts.get('autoUV', True):
                 raise ValueError(f'{obj.name} 没有 UV，请先展开 UV，或在对象模式启用自动 UV')
     manifest = job.get('material', {})
@@ -192,7 +192,7 @@ def build_material(manifest, opts):
     if manifest.get('kind') == 'blend':
         return import_material(manifest)
     signature = hashlib.sha256(json.dumps({'id': manifest['id'], 'folder': manifest['folder'],
-        'root': manifest['root'], 'options': opts}, sort_keys=True).encode()).hexdigest()
+        'root': manifest['root'], 'kind':manifest.get('kind'), 'options': opts}, sort_keys=True).encode()).hexdigest()
     # Reuse only our material for the same asset/options, never replace another shader graph.
     existing = next((m for m in bpy.data.materials if m.get('surface_studio_signature') == signature), None)
     if existing:
@@ -295,6 +295,8 @@ def smart_uv(context, obj):
 
 
 def apply_job(context, job, target=None):
+    if job.get("material",{}).get("kind")=="decal":
+        raise ValueError("贴花请拖到模型表面，以确定位置和方向")
     objects, opts = validate_job(job, target)
     editing = context.mode == 'EDIT_MESH'
     material, warnings = build_material(job['material'], opts)
@@ -410,7 +412,7 @@ def read_drop(filename):
     if path.stat().st_size > 1024 * 1024:
         raise ValueError('无效的拖拽数据')
     data = read_json(path)
-    if not isinstance(data, dict) or data.get('app') != 'SurfaceStudio' or data.get('protocol') != 1 or data.get('id') != path.stem:
+    if not isinstance(data, dict) or data.get('app') != 'SurfaceStudio' or data.get('protocol') not in (1,2) or data.get('id') != path.stem:
         raise ValueError('无法识别的 Surface Studio 拖拽文件')
     if not isinstance(data.get('expires'), (int, float)) or not time.time() < data['expires'] <= time.time()+301:
         raise ValueError('拖拽已过期，请从 SS 重新拖出材质')
@@ -419,7 +421,7 @@ def read_drop(filename):
     return path, data
 
 
-def mesh_at_drop(context, x, y):
+def mesh_at_drop(context, x, y, surface=False):
     from bpy_extras import view3d_utils
     if not context.region or context.region.type != 'WINDOW' or context.area.type != 'VIEW_3D':
         return None
@@ -439,7 +441,7 @@ def mesh_at_drop(context, x, y):
             # Collection/geometry-node instances have no independently editable target.
             if any(abs(matrix[i][j]-original.matrix_world[i][j]) > 1e-5 for i in range(4) for j in range(4)):
                 return None
-            return original
+            return (original,location.copy(),normal.copy()) if surface else original
         origin = location + direction * 0.0001
     return None
 
@@ -456,7 +458,9 @@ class SURFACESTUDIO_OT_drop(Operator):
         return bool(context.area and context.area.type == 'VIEW_3D' and context.region and context.region.type == 'WINDOW')
 
     def invoke(self, context, event):
-        target = mesh_at_drop(context, event.mouse_x, event.mouse_y)
+        hit = mesh_at_drop(context, event.mouse_x, event.mouse_y, surface=True)
+        target=hit[0] if hit else None
+        self._surface_hit=hit
         self.target_name = target.name if target else ''
         return self.execute(context)
 
@@ -474,8 +478,18 @@ class SURFACESTUDIO_OT_drop(Operator):
             if not target: raise ValueError('未命中可编辑网格；请把材质球拖到模型表面')
             if BUSY: raise ValueError('Blender 正在处理另一个材质，请稍后再拖拽')
             atomic_json(result_path, {'id': path.stem, 'status': 'applying', 'updated': time.time(), 'message': '正在赋予拖拽材质…'})
-            result = apply_job(context, data, target=target)
-            result['message'] = f'已将 {data["material"]["name"]} 赋予 {target.name} · Ctrl+Z 可撤销'
+            if data['material'].get('kind')=='decal':
+                hit=getattr(self,'_surface_hit',None)
+                if not hit or hit[0]!=target: raise ValueError('请重新拖到模型表面')
+                validate_job(data,target)
+                from .decal import place
+                result=place(context,target,hit[1],hit[2],data['material'],build_material,data['options'])
+            else:
+                result = apply_job(context, data, target=target)
+            if data['material'].get('kind')!='decal':
+                result['message'] = f'已将 {data["material"]["name"]} 赋予 {target.name} · Ctrl+Z 可撤销'
+            elif context.space_data.shading.type in ('SOLID','WIREFRAME'):
+                context.space_data.shading.type='MATERIAL'
             atomic_json(result_path, {'id': path.stem, **result})
             LAST_MESSAGE = result['message']
             self.report({'INFO'}, LAST_MESSAGE)
@@ -581,7 +595,10 @@ def on_load(_):
         except OSError: pass
 
 
-CLASSES = (SURFACESTUDIO_Preferences, SURFACESTUDIO_OT_apply, SURFACESTUDIO_OT_open,
+from .decal import (SURFACESTUDIO_PT_decal, SURFACESTUDIO_OT_attach_decal,
+                    SURFACESTUDIO_OT_slide_decal, register_slide_keymap, unregister_slide_keymap)
+
+CLASSES = (SURFACESTUDIO_OT_slide_decal, SURFACESTUDIO_OT_attach_decal, SURFACESTUDIO_PT_decal, SURFACESTUDIO_Preferences, SURFACESTUDIO_OT_apply, SURFACESTUDIO_OT_open,
            SURFACESTUDIO_OT_connect, SURFACESTUDIO_PT_panel, SURFACESTUDIO_OT_drop, SURFACESTUDIO_FH_material, SURFACESTUDIO_OT_export)
 
 
@@ -603,11 +620,13 @@ def listen_for_connection():
 
 def register():
     for cls in CLASSES: bpy.utils.register_class(cls)
+    register_slide_keymap()
     if not bpy.app.timers.is_registered(listen_for_connection): bpy.app.timers.register(listen_for_connection, first_interval=1.0, persistent=True)
     if on_load not in bpy.app.handlers.load_post: bpy.app.handlers.load_post.append(on_load)
 
 
 def unregister():
+    unregister_slide_keymap()
     if bpy.app.timers.is_registered(listen_for_connection): bpy.app.timers.unregister(listen_for_connection)
     disconnect()
     if on_load in bpy.app.handlers.load_post: bpy.app.handlers.load_post.remove(on_load)

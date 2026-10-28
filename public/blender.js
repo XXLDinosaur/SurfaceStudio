@@ -51,10 +51,11 @@
     }
     select.hidden = sessions.length < 2;
     const button = area.querySelector('#send-blender');
-    const valid = session?.objects?.length && ['OBJECT','EDIT_MESH'].includes(session.mode) && (session.mode !== 'EDIT_MESH' || session.selectedFaces > 0);
+    const decal=byId.get(selected)?.kind==='decal';
+    const valid = !decal && session?.objects?.length && ['OBJECT','EDIT_MESH'].includes(session.mode) && (session.mode !== 'EDIT_MESH' || session.selectedFaces > 0);
     button.disabled = busy || !valid || session?.busy;
-    if (!busy) button.innerHTML = `${icon('cube')} ${session?.busy ? 'Blender 正在处理中…' : '赋予到 Blender'}`;
-    area.querySelector('#blender-mode-note').textContent = session?.mode === 'EDIT_MESH' ? '仅改变选中面的材质 · Ctrl + Z 可撤销' : '赋予全部选中网格 · 原材质槽保留 · 可撤销';
+    if (!busy) button.innerHTML = `${icon('cube')} ${session?.busy ? 'Blender 正在处理中…' : (decal?'拖到模型表面添加贴花':'赋予到 Blender')}`;
+    area.querySelector('#blender-mode-note').textContent = decal ? '贴花仅支持桌面拖放 · 保留原材质 · 需插件 1.3.0' : session?.mode === 'EDIT_MESH' ? '仅改变选中面的材质 · Ctrl + Z 可撤销' : '赋予全部选中网格 · 原材质槽保留 · 可撤销';
   }
   function mount() {
     const body = document.querySelector('#detail .detail-body');
@@ -69,6 +70,7 @@
     panel.querySelector('#blender-session').onchange = e => {selectedSession = e.target.value; updateStatus();};
     panel.querySelector('#send-blender').onclick = send;
     if(byId.get(selected)?.kind==='blend'){panel.querySelector('.blender-options summary').textContent='导入选项（原生节点保持不变）';for(const id of ['blender-repeat','blender-ao','blender-bump','blender-flipNormalY'])panel.querySelector('#'+id).closest('label').hidden=true;panel.querySelector('.blender-options-body p').textContent='平铺与法线方向沿用材质原始节点设置。需要连接插件 1.2.0 或更新版本。';}
+    if(byId.get(selected)?.kind==='decal')panel.querySelector('.blender-options').hidden=true;
     updateStatus();
   }
   async function send() {

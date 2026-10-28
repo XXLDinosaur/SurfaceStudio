@@ -58,7 +58,8 @@ class NormalLibraryTests(unittest.TestCase):
         normals=[a for a in app.ASSETS.values() if a.get('kind')=='normal']
         first,second=normals[:2]
         app.STATE['favorites']=[first['id']];app.STATE['collections']=[{'id':'water','name':'水','ids':[second['id']]}]
-        app.edit_category({'action':'assign','asset':second['id'],'category':'Water' if 'Water' in app.CATEGORIES else 'Grass'})
+        assigned_category='Water' if 'Water' in app.CATEGORIES else 'Grass'
+        app.edit_category({'action':'assign','asset':second['id'],'category':assigned_category})
         backup=app.organizer.export(SimpleNamespace(**vars(app)))
         self.assertEqual(len(set(backup['materials'].values())),4)
         relocated=self.base/'other-drive';self.normals.rename(relocated);app.CONFIG['normalRoot']=str(relocated);app.scan()
@@ -69,7 +70,7 @@ class NormalLibraryTests(unittest.TestCase):
         app.organizer.handle(SimpleNamespace(**vars(app)),{'action':'restore','backup':backup})
         self.assertEqual(app.STATE['favorites'],[first_id])
         self.assertEqual(app.STATE['collections'][0]['ids'],[second_id])
-        self.assertEqual(next(a for a in app.categorized_library()['assets'] if a['id']==second_id)['category'],'Grass')
+        self.assertEqual(next(a for a in app.categorized_library()['assets'] if a['id']==second_id)['category'],assigned_category)
 
     def test_invalid_source_preserves_config_and_pbr_normal_detection(self):
         old=app.CONFIG.copy()

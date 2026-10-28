@@ -31,7 +31,7 @@
 <button data-view="favorites" class="nav-item"><svg><use href="#i-heart"/></svg>我的收藏<span id="fav-count" class="nav-count">0</span></button>
 <button data-view="recent" class="nav-item"><svg><use href="#i-clock"/></svg>最近浏览</button>
 </nav>
-<div class="nav-label category-label">材质分类 <span id="category-number"></span></div>
+<div class="nav-label category-label">素材分类 <span id="category-number"></span></div>
 <nav id="categories" class="categories"></nav>
 <div class="sidebar-bottom"><button id="settings" class="nav-item"><svg><use href="#i-settings"/></svg>素材库设置</button></div>
 </aside>
@@ -41,7 +41,7 @@
 <section class="page-heading"><div><div class="eyebrow">YOUR TEXTURE. YOUR WORLD.</div><h1 id="page-title">好材质，让灵感落地<span>.</span></h1><p id="page-description">你的私人材质档案。发现、整理，构建下一个真实世界。</p></div><button id="library-button" class="outline-button"><svg><use href="#i-folder"/></svg>管理素材库<svg class="small"><use href="#i-arrow"/></svg></button></section>
 
 <section class="library-section"><div class="library-tabs"><div class="tabs"><button id="tab-all" class="selected">材质库 <span id="result-count">—</span></button><span class="tab-caption">精挑细选，自由创作</span></div><div class="library-status"><span class="live-dot"></span><span id="index-status">连接本地资料库</span></div></div>
-<div class="toolbar"><div class="search-box"><svg><use href="#i-search"/></svg><input id="search" type="search" placeholder="搜索材质、名称、标签…" autocomplete="off"><kbd>Ctrl K</kbd></div><select id="map-filter" aria-label="贴图通道筛选"><option value="">全部贴图</option><option value="BlenderNative">Blender 自制材质</option><option value="NormalOnly">纯法线贴图</option><option value="Normal">含法线贴图</option><option value="Displacement">含置换贴图</option><option value="AO">含 AO 贴图</option><option value="Metalness">含金属度贴图</option></select><select id="sort" aria-label="排序"><option value="curated">精选排序</option><option value="name">名称 A—Z</option><option value="recent">最近更新</option><option value="size">文件大小</option></select><div class="view-buttons"><button class="icon-button active" id="grid-view" title="网格视图"><svg><use href="#i-grid"/></svg></button><button class="icon-button" id="list-view" title="列表视图"><svg><use href="#i-list"/></svg></button></div><button class="icon-button filter-toggle" id="filter-toggle" title="更多筛选"><svg><use href="#i-settings"/></svg></button></div>
+<div class="toolbar"><div class="search-box"><svg><use href="#i-search"/></svg><input id="search" type="search" placeholder="搜索材质、名称、标签…" autocomplete="off"><kbd>Ctrl K</kbd></div><select id="map-filter" aria-label="贴图通道筛选"><option value="">全部贴图</option><option value="NormalOnly">纯法线贴图</option><option value="Normal">含法线贴图</option><option value="Displacement">含置换贴图</option><option value="AO">含 AO 贴图</option><option value="Metalness">含金属度贴图</option></select><select id="sort" aria-label="排序"><option value="curated">精选排序</option><option value="name">名称 A—Z</option><option value="recent">最近更新</option><option value="size">文件大小</option></select><div class="view-buttons"><button class="icon-button active" id="grid-view" title="网格视图"><svg><use href="#i-grid"/></svg></button><button class="icon-button" id="list-view" title="列表视图"><svg><use href="#i-list"/></svg></button></div><button class="icon-button filter-toggle" id="filter-toggle" title="更多筛选"><svg><use href="#i-settings"/></svg></button></div>
 <div class="advanced-filters" id="advanced-filters" hidden><label>分辨率 <select id="resolution-filter"><option value="">全部分辨率</option><option>4K</option><option>8K</option><option>2K</option></select></label><label class="check-label"><input id="tileable-filter" type="checkbox">仅显示可平铺材质</label><label class="density-label">卡片大小 <input id="density" type="range" min="175" max="300" value="220"></label><button class="text-button" id="reset-filters">重置筛选</button></div>
 <div id="active-filters" class="active-filters"></div>
 <div id="asset-grid" class="asset-grid" aria-live="polite"></div>
@@ -79,6 +79,7 @@
 <link rel="stylesheet" href="/organizer.css?v=1">
 <script src="/organizer.js?v=1"></script>
 <link rel="stylesheet" href="/normal-library.css?v=1">
-<script src="/normal-library.js?v=1"></script>
+
 <script src="/updates.js"></script>
+<script src="/release-notes.js"></script>
 </body></html>

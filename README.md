@@ -6,6 +6,12 @@
 
 Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件夹，提供预览、搜索、分类、收藏和对比，并通过配套 Blender 插件给模型或选中的面赋材质。青灰磨砂玻璃界面、一体化无边框窗口，无需登录账号或上传素材。
 
+## 1.6.0：贴花拖放
+
+查看 **[1.6.0 图文更新说明](releases/v1.6.0.md)**：贴花表面滑动、素材分类重构、首次启动更新说明和高 DPI 窗口适配。
+
+配套插件 1.3.0 支持把带透明遮罩的污渍、裂缝等贴花拖到 Blender 模型表面，创建独立贴花并保留原模型材质。可调整尺寸、旋转、透明度和表面偏移。详见 [贴花使用说明](docs/decals.md)。
+
 ## 1.5.0：Blender 材质反向入库与软件更新
 
 SS 1.5.0 / 插件 1.2.2 新增“添加到 SS”：直接保存到 SS 设置的位置（默认跟随当前材质库），自动进入“未分类”。保留静态节点、节点组及内嵌贴图，无需手动导出再导入，重装后重新添加目录即可使用。使用步骤、迁移方法与支持范围见 [Blender 自制材质保存指南](docs/blender-material-export.md)。
@@ -22,9 +28,9 @@ SS 1.5.0 / 插件 1.2.2 新增“添加到 SS”：直接保存到 SS 设置的�
 
 1.5.0 加入了 GitHub 正式版本检查：在「材质库设置 → 软件更新」查看更新说明、下载校验后的安装包并确认安装。支持关闭自动检查；使用方式和发布签名流程见 [软件更新说明](docs/auto-update.md)。1.4.0 及更早版本需要先手动安装本版，以后才能在软件内更新。发现新版时，左下角材质库设置旁会显示“更新”。
 
-从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.5.0-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
+从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.6.0-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
 
-合集包含 **SS 1.5.0 自动安装器、Blender 连接插件 1.2.2、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
+合集包含 **SS 1.6.0 自动安装器、Blender 连接插件 1.3.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
 
 1. 完整解压合集，运行 `SurfaceStudio-Setup.exe`。
 2. 选择 SS 安装目录，勾选检测到的 Blender 版本。安装器会安装并启用配套插件、配置 SS 路径。

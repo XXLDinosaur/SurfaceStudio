@@ -6,3 +6,5 @@ html[data-appearance="dark"] .glass-select-menu{background:#2e424ff2;box-shadow:
 .glass-select-menu button[aria-selected="true"]{background:var(--selected);color:var(--accent);font-weight:600}
 .glass-select-menu button[aria-selected="true"]:after{content:'✓';position:absolute;right:12px;top:50%;transform:translateY(-50%)}
 select[aria-expanded="true"]{outline:2px solid var(--accent);outline-offset:1px}
+/* Form padding must not consume the fixed toolbar-select text area. */
+select.form-input{height:auto;min-height:48px;padding:10px 36px 10px 16px;line-height:1.5;font-size:var(--read-main,16px)}

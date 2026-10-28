@@ -122,6 +122,7 @@ class WindowControls:
 
 def open_window(instance):
     import webview
+    from window_sizing import fit_startup_window
     api = WindowControls()
     webview.settings['DRAG_REGION_DIRECT_TARGET_ONLY'] = True
     window = webview.create_window(
@@ -131,6 +132,7 @@ def open_window(instance):
         background_color='#263640', text_select=True,
     )
     api._window = window
+    window.events.before_show += lambda: fit_startup_window(window)
     window.events.maximized += lambda: api._state_changed(True)
     window.events.restored += lambda: api._state_changed(False)
     stopped = threading.Event()
@@ -184,7 +186,7 @@ def run_primary(instance):
         return
     import server
     saved=server.read_json(server.DATA/'index.json',None)
-    if saved and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==server.CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==server.CONFIG.get('materialSaveRoot',''):
+    if saved and saved.get('decalRoot','')==server.CONFIG.get('decalRoot','') and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==server.CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==server.CONFIG.get('materialSaveRoot',''):
         server.INDEX=saved
         server.ASSETS={a['id']:a for a in saved['assets']}
     else: server.scan()

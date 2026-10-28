@@ -29,7 +29,7 @@
       const map = target.closest('[data-map]')?.dataset.map;
       actions = [
         entry('查看材质详情', 'cube', () => openDetail(id), 'Enter'),
-        entry('赋予到 Blender', 'arrow', () => window.surfaceBlender.applyFromMenu(id)),
+        asset.kind==='decal' ? entry('拖到模型表面添加贴花', 'arrow', () => toast('按住贴花预览图，拖到 Blender 模型表面松开')) : entry('赋予到 Blender', 'arrow', () => window.surfaceBlender.applyFromMenu(id)),
         null,
         entry(state.favorites.includes(id) ? '取消收藏' : '收藏材质', 'heart', () => setFavorite(id)),
         entry('重命名…', 'copy', () => materialRenamer(id)),
