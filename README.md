@@ -10,13 +10,27 @@ Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件�
 
 [下载 Windows 安装器](https://github.com/XXLDinosaur/SurfaceStudio/releases/download/v1.7.0/SurfaceStudio-Setup.exe) · [单独下载 SketchUp 插件](https://github.com/XXLDinosaur/SurfaceStudio/releases/download/v1.7.0/SurfaceStudio-SketchUp.rbz) · [单独下载 Blender 插件](https://github.com/XXLDinosaur/SurfaceStudio/releases/download/v1.7.0/surface_studio_bridge.zip)
 
-1. **选版本。** 安装器从 Windows 安装记录识别 SketchUp 2025 和 2026，并检查程序是否存在。只装一个就只列一个，同时安装可分别勾选。以后安装 SU 2026，重新运行安装器即可补装。
-2. **拖放材质。** 安装完成后重新打开 SketchUp，在 SS 桌面窗口按住材质预览图，拖到模型上松开。Blender 和 SU 同时运行时，松开鼠标的位置决定接收窗口。SU 支持普通 PBR 和纯法线材质，在目标软件中按 Ctrl+Z 可撤销。
-3. **从 SU 入库。** 选中带贴图材质的面，在扩展程序菜单选择「Surface Studio · 添加材质到 SS」，然后在 SS 中重新扫描。贴花及 Blender 原生节点材质使用 Blender 工作流。
+### 从材质库拖到模型
 
-![安装器版本选择示意：勾选 SketchUp 2026，保留 2025 未选中](docs/images/v1.7.0/setup.png)
+打开 SS 和目标建模软件。在下图中，左上角的 **Chipped Rock** 是一个有 5 张贴图的岩石材质。按住金色标注框内的材质球预览图，拖到 SketchUp 模型表面或 Blender 对象模式下的网格上，再松开鼠标。两个软件同时打开时，松手所在的窗口接收材质。需要撤销时，在接收窗口按 **Ctrl+Z**。
 
-上图使用模拟双版本安装记录展示选择方式。本机实测识别 SU 2025，且收到了 SU 2025 的赋材质成功回执。SU 2026 已通过模拟安装、版本隔离和旧插件备份测试，实际模型拖放仍待 2026 真机验证。
+![SS 材质库截图，金色边框标出 Chipped Rock 预览图的拖动起点](docs/images/v1.7.0/desktop-drag.jpg)
+
+### 在详情里检查平铺效果
+
+单击同一张卡片打开详情。下图中预览图底部的 **材质球、表面、平铺检视** 可以切换查看方式。选好后，也可以按住详情中的大预览图拖到模型上。SketchUp 支持普通 PBR 和纯法线材质，贴花及 Blender 原生材质请拖到 Blender。
+
+<img src="docs/images/v1.7.0/material-detail.jpg" width="320" alt="Chipped Rock 材质详情截图，预览图下方显示三种查看方式">
+
+### 安装 SketchUp 连接插件
+
+第一次使用时，在安装器中勾选需要连接的版本，点击「安装并连接」，完成后重新打开 SketchUp。只安装 SU 2025 的电脑会只列出 2025；以后装好 2026，再运行安装器即可补装。
+
+![安装器界面示意，两个版本分别勾选，本例选择 SketchUp 2026](docs/images/v1.7.0/setup.png)
+
+安装器截图使用模拟双版本记录。SU 2025 已在本机检测到并返回过赋材质成功回执。SU 2026 已通过模拟安装、版本隔离和备份测试，模型拖放仍待真机验证。
+
+如需从 SU 导回贴图，选中带材质的面，打开「扩展程序 → Surface Studio · 添加材质到 SS」，然后在 SS 中重新扫描。
 
 ## 1.6.0 图文更新：贴花、素材分类与界面适配
 
