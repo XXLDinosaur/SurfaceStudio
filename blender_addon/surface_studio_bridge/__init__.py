@@ -1,7 +1,7 @@
 bl_info = {
     'name': 'Surface Studio — 本地材质库',
     'author': 'Surface Studio',
-    'version': (1, 3, 0),
+    'version': (1, 3, 1),
     'blender': (4, 2, 0),
     'location': '3D Viewport > Sidebar > Surface Studio',
     'description': '打开 Surface Studio，将本地 PBR 材质一键赋予选中模型或选中的面',

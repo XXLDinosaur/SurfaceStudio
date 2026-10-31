@@ -55,7 +55,7 @@ class NativeLibraryTests(unittest.TestCase):
             self.assertEqual(a['kind'],'blend');self.assertFalse(a['normalOnly'])
             self.assertEqual(app.asset_file(a['id'],'material.blend'),self.folder/'material.blend')
             with self.assertRaises(ValueError):app.asset_file(a['id'],'surface-material.json')
-            backup=app.organizer.export(SimpleNamespace(**vars(app)))
+            backup=app.organizer.export(app.APP.snapshot_for_test())
             self.assertEqual(backup['materials'][a['id']],a['libraryKey'])
             self.assertEqual(app.categorized_library()['effectiveMaterialSaveRoot'],str(ordinary))
             # A custom save destination is indexed without manually adding a library source.

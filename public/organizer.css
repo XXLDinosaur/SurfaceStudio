@@ -1,1 +1,74 @@
-#bulk-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 0 0;font-size:var(--read-secondary)}#bulk-bar[hidden]{display:none}#bulk-bar button{padding:7px 11px;border:1px solid var(--glass-edge);border-radius:10px;background:var(--input);color:var(--ink);font:inherit;cursor:pointer}#bulk-bar button:disabled{opacity:.4;cursor:default}#bulk-count{margin-right:auto;color:var(--accent);font-weight:600}.bulk-mode .asset-card{position:relative}.bulk-mode .asset-card:after{content:'✓';position:absolute;top:13px;right:13px;width:26px;height:26px;border-radius:8px;border:1px solid var(--ink-muted);background:var(--bg);color:transparent;display:grid;place-items:center;pointer-events:none;z-index:3}.bulk-mode .asset-card.bulk-picked{outline:2px solid var(--accent);outline-offset:-2px}.bulk-mode .asset-card.bulk-picked:after{background:var(--accent);color:var(--bg)}.bulk-mode .card-favorite,.bulk-mode .card-compare{display:none!important}.backup-actions{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}#backup-result{overflow-wrap:anywhere}#backup-file{max-width:100%;font:inherit;color:var(--ink)}
+#bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 0;
+  font-size: var(--read-secondary);
+}
+#bulk-bar[hidden] {
+  display: none;
+}
+#bulk-bar button {
+  padding: 7px 11px;
+  border: 1px solid var(--glass-edge);
+  border-radius: 10px;
+  background: var(--input);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+#bulk-bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+#bulk-count {
+  margin-right: auto;
+  color: var(--accent);
+  font-weight: 600;
+}
+.bulk-mode .asset-card {
+  position: relative;
+}
+.bulk-mode .asset-card:after {
+  content: "✓";
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--ink-muted);
+  background: var(--bg);
+  color: transparent;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 3;
+}
+.bulk-mode .asset-card.bulk-picked {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.bulk-mode .asset-card.bulk-picked:after {
+  background: var(--accent);
+  color: var(--bg);
+}
+.bulk-mode .card-favorite,
+.bulk-mode .card-compare {
+  display: none !important;
+}
+.backup-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+#backup-result {
+  overflow-wrap: anywhere;
+}
+#backup-file {
+  max-width: 100%;
+  font: inherit;
+  color: var(--ink);
+}

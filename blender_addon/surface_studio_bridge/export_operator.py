@@ -11,7 +11,9 @@ from .native_material import export_snapshot
 
 
 def register_source(directory):
-    base = 'http://127.0.0.1:47831'
+    from . import executable
+    from .service import resolve_service
+    base = resolve_service(executable())
     with urlopen(base+'/api/library', timeout=5) as response:
         library = json.load(response)
     request = Request(base+'/api/blender/library-source',
@@ -44,7 +46,9 @@ class SURFACESTUDIO_OT_export(bpy.types.Operator):
             self._registering = False
             material = self._material or context.object.active_material
             try:
-                with urlopen('http://127.0.0.1:47831/api/library', timeout=3) as response:
+                from . import executable
+                from .service import resolve_service
+                with urlopen(resolve_service(executable())+'/api/library', timeout=3) as response:
                     library = json.load(response)
             except Exception as exc:
                 raise ValueError('请先打开 SS，再点击“添加到 SS”') from exc

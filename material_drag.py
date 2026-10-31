@@ -4,7 +4,7 @@ from ctypes import wintypes
 from pathlib import PureWindowsPath
 
 
-def blender_under_pointer():
+def pointer_target():
     """Read the actual hit window, not the foreground/drag source window."""
     user = ctypes.WinDLL('user32', use_last_error=True)
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
@@ -20,6 +20,8 @@ def blender_under_pointer():
     kernel.QueryFullProcessImageNameW.restype = wintypes.BOOL
     kernel.CloseHandle.argtypes = [wintypes.HANDLE]
     kernel.CloseHandle.restype = wintypes.BOOL
+    user.ScreenToClient.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
+    user.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     point, pid = wintypes.POINT(), wintypes.DWORD()
     if not user.GetCursorPos(ctypes.byref(point)): return False
     window = user.WindowFromPoint(point)
@@ -30,9 +32,25 @@ def blender_under_pointer():
         size = wintypes.DWORD(32768)
         path = ctypes.create_unicode_buffer(size.value)
         if not kernel.QueryFullProcessImageNameW(process, 0, path, ctypes.byref(size)): return False
-        return PureWindowsPath(path.value).name.lower() == 'blender.exe'
+        name = PureWindowsPath(path.value).name.lower()
+        rect = wintypes.RECT()
+        if not user.ScreenToClient(window, ctypes.byref(point)) or not user.GetClientRect(window, ctypes.byref(rect)):
+            return None
+        return name, pid.value, [point.x, point.y, rect.right, rect.bottom]
     finally:
         kernel.CloseHandle(process)
+
+
+def blender_under_pointer():
+    hit = pointer_target()
+    return bool(hit and hit[0] == 'blender.exe')
+
+
+def route_release(release):
+    hit = pointer_target()
+    if hit and hit[0] == 'sketchup.exe':
+        release.append(hit)
+    return bool(hit and hit[0] == 'blender.exe')
 
 
 def install_drop_guard(form, target_check=blender_under_pointer):

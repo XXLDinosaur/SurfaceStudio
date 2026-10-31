@@ -2,13 +2,25 @@
 
 # Surface Studio
 
-**本地 PBR 材质管理器，让材质库与 Blender 创作工作流连接。**
+**本地 PBR 材质管理器，连接 SketchUp 与 Blender 创作工作流。**
 
 Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件夹，提供预览、搜索、分类、收藏和对比，并通过配套 Blender 插件给模型或选中的面赋材质。青灰磨砂玻璃界面、一体化无边框窗口，无需登录账号或上传素材。
 
+## 1.7.0 · 从 SS 拖到 SketchUp 或 Blender
+
+[下载 Windows 安装器](https://github.com/XXLDinosaur/SurfaceStudio/releases/download/v1.7.0/SurfaceStudio-Setup.exe) · [单独下载 SketchUp 插件](https://github.com/XXLDinosaur/SurfaceStudio/releases/download/v1.7.0/SurfaceStudio-SketchUp.rbz) · [单独下载 Blender 插件](https://github.com/XXLDinosaur/SurfaceStudio/releases/download/v1.7.0/surface_studio_bridge.zip)
+
+1. **选版本。** 安装器从 Windows 安装记录识别 SketchUp 2025 和 2026，并检查程序是否存在。只装一个就只列一个，同时安装可分别勾选。以后安装 SU 2026，重新运行安装器即可补装。
+2. **拖放材质。** 安装完成后重新打开 SketchUp，在 SS 桌面窗口按住材质预览图，拖到模型上松开。Blender 和 SU 同时运行时，松开鼠标的位置决定接收窗口。SU 支持普通 PBR 和纯法线材质，在目标软件中按 Ctrl+Z 可撤销。
+3. **从 SU 入库。** 选中带贴图材质的面，在扩展程序菜单选择「Surface Studio · 添加材质到 SS」，然后在 SS 中重新扫描。贴花及 Blender 原生节点材质使用 Blender 工作流。
+
+![安装器版本选择示意：勾选 SketchUp 2026，保留 2025 未选中](docs/images/v1.7.0/setup.png)
+
+上图使用模拟双版本安装记录展示选择方式。本机实测识别 SU 2025，且收到了 SU 2025 的赋材质成功回执。SU 2026 已通过模拟安装、版本隔离和旧插件备份测试，实际模型拖放仍待 2026 真机验证。
+
 ## 1.6.0 图文更新：贴花、素材分类与界面适配
 
-**当前版本：SS 1.6.0 / Blender 插件 1.3.0 · 2026-10-29**
+**历史版本：SS 1.6.0 / Blender 插件 1.3.0 · 2026-10-29**
 
 [下载安装包](https://github.com/XXLDinosaur/SurfaceStudio/releases/tag/v1.6.0) · [完整更新说明与验证边界](releases/v1.6.0.md)
 
@@ -58,7 +70,7 @@ SS 1.5.0 / 插件 1.2.2 新增“添加到 SS”：直接保存到 SS 设置的�
 
 1.5.0 加入了 GitHub 正式版本检查：在「材质库设置 → 软件更新」查看更新说明、下载校验后的安装包并确认安装。支持关闭自动检查；使用方式和发布签名流程见 [软件更新说明](docs/auto-update.md)。1.4.0 及更早版本需要先手动安装本版，以后才能在软件内更新。发现新版时，左下角材质库设置旁会显示“更新”。
 
-从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-v1.6.0-Windows-x64-with-Blender.zip**。GitHub 的 Download ZIP 是源码，不是安装包。
+从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-Setup.exe**。GitHub 的 Download ZIP 是源码，不是安装包。
 
 合集包含 **SS 1.6.0 自动安装器、Blender 连接插件 1.3.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
 

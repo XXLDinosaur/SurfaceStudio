@@ -153,10 +153,10 @@ class LibraryTests(unittest.TestCase):
             def fail_state(path,value):
                 if path.name=='state.json':raise OSError('simulated interruption')
                 real(path,value)
-            env=SimpleNamespace(**vars(app));env.save_json=fail_state
+            env=app.APP.snapshot_for_test();env.save_json=fail_state
             with self.assertRaises(OSError):app.organizer.commit(env,target,{})
             self.assertTrue((app.DATA/'organization-pending.json').exists())
-            app.organizer.recover(SimpleNamespace(**vars(app)))
+            app.organizer.recover(app.APP.snapshot_for_test())
             self.assertEqual(app.STATE,target)
             self.assertFalse((app.DATA/'organization-pending.json').exists())
         finally:

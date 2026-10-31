@@ -1,4 +1,31 @@
-html.native-desktop .card-image,html.native-desktop #detail-preview{cursor:grab;user-select:none;-webkit-user-select:none}
-html.native-desktop .card-image img,html.native-desktop #detail-preview img{-webkit-user-drag:none}
-.material-dragging .card-image,.material-dragging #detail-preview{cursor:grabbing}
-.material-dragging:after{content:'拖到 Blender 视口中的模型上 · Esc 取消';position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:13px 24px;background:#29443bed;color:#e4f4ec;border:1px solid #9ec0b077;border-radius:16px;box-shadow:0 8px 25px #0003;backdrop-filter:blur(18px);font-size:15px;pointer-events:none;z-index:9999}
+html.native-desktop .card-image,
+html.native-desktop #detail-preview {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+html.native-desktop .card-image img,
+html.native-desktop #detail-preview img {
+  -webkit-user-drag: none;
+}
+.material-dragging .card-image,
+.material-dragging #detail-preview {
+  cursor: grabbing;
+}
+.material-dragging:after {
+  content: "拖到 Blender 视口中的模型上 · Esc 取消";
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 13px 24px;
+  background: #29443bed;
+  color: #e4f4ec;
+  border: 1px solid #9ec0b077;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px #0003;
+  backdrop-filter: blur(18px);
+  font-size: 15px;
+  pointer-events: none;
+  z-index: 9999;
+}

@@ -82,6 +82,7 @@ class WindowControls:
         if path.parent != allowed or path.suffix != '.ssmat' or not re.fullmatch('[a-f0-9]{32}', path.stem):
             raise ValueError('无效的材质拖拽文件')
         if not path.is_file(): raise ValueError('拖拽材质已失效，请重试')
+        release = []
         result = {'dropped': False}
         def drag():
             try:
@@ -89,9 +90,9 @@ class WindowControls:
                 data = DataObject()
                 from System.Windows.Forms import DataFormats
                 data.SetData(DataFormats.FileDrop, Array[String]([str(path)]))
-                from material_drag import install_drop_guard
+                from material_drag import install_drop_guard, route_release
                 form = self._window.native
-                guard = install_drop_guard(form)
+                guard = install_drop_guard(form, lambda: route_release(release))
                 try:
                     result['dropped'] = form.DoDragDrop(data, DragDropEffects.Copy) == DragDropEffects.Copy
                 finally:
@@ -100,6 +101,17 @@ class WindowControls:
                 result['error'] = str(exc)
         self._window.native.Invoke(Action(drag))
         if result.get('error'): raise RuntimeError(result['error'])
+        if release:
+            import os, json, time
+            _, pid, coords = release[-1]
+            inbox = Path(os.environ['LOCALAPPDATA'])/'SurfaceStudio'/'sketchup'/str(pid)
+            ready = inbox/'ready'
+            if not ready.exists() or time.time()-ready.stat().st_mtime > 20:
+                raise RuntimeError('当前 SketchUp 窗口未连接，请重启 SketchUp 加载新版插件')
+            tmp = inbox/(path.stem+'.tmp')
+            tmp.write_text(json.dumps({'path':str(path), 'point':coords}), encoding='utf-8')
+            tmp.replace(inbox/(path.stem+'.json'))
+            return {'dropped': True, 'target': 'SketchUp'}
         return result
 
     def bounds(self):
@@ -176,26 +188,24 @@ def main():
 
 
 def run_primary(instance):
-    healthy = False
-    try:
-        with urlopen(URL+'/api/health',timeout=2) as response:
-            healthy = json.load(response).get('app')=='Surface Studio'
-    except Exception: pass
-    if healthy:
-        open_window(instance)
-        return
+    global URL
+    import service_discovery
     import server
     saved=server.read_json(server.DATA/'index.json',None)
     if saved and saved.get('decalRoot','')==server.CONFIG.get('decalRoot','') and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==server.CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==server.CONFIG.get('materialSaveRoot',''):
         server.INDEX=saved
         server.ASSETS={a['id']:a for a in saved['assets']}
     else: server.scan()
-    http=server.ThreadingHTTPServer(('127.0.0.1',47831),server.Handler)
+    http=service_discovery.bind_server(server.Handler,server.PORT)
+    server.PORT=http.server_port
+    URL='http://127.0.0.1:'+str(http.server_port)
+    service_discovery.publish(server.DATA,server.PORT,server.TOKEN)
     # Hiding the desktop keeps the bridge alive; exiting its GUI releases ownership.
     threading.Thread(target=http.serve_forever,daemon=True).start()
     try:
         open_window(instance)
     finally:
+        service_discovery.clear(server.DATA,server.TOKEN)
         http.shutdown()
         http.server_close()
 

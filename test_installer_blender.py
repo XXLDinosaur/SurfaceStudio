@@ -14,7 +14,8 @@ import installer_core as core
 ROOT = Path(__file__).resolve().parent
 
 
-def test(executable):
+def test(executable, addon_archive=None):
+    addon_archive = Path(addon_archive) if addon_archive else ROOT/'surface_studio_bridge.zip'
     with tempfile.TemporaryDirectory(prefix='ss-install-test-') as directory:
         root = Path(directory)
         env = dict(os.environ)
@@ -28,11 +29,11 @@ def test(executable):
         seed.write_text("import bpy\nbpy.context.preferences.view.show_splash = False\nbpy.context.preferences.inputs.use_zoom_to_mouse = True\nbpy.context.preferences.filepaths.use_scripts_auto_execute = True\nbpy.ops.wm.save_userpref()\n", encoding='utf-8')
         assert core.run([executable, '--background', '--factory-startup', '--python-exit-code', '1', '--python', str(seed)], env=env).returncode == 0
         exe = root/'中文 安装位置/Surface Studio.exe'; exe.parent.mkdir(); exe.write_bytes(b'test-path')
-        first = core.install_blender(info, exe, ROOT/'surface_studio_bridge.zip', ROOT/'installer_blender.py', root/'backups', env, check_running=False)
+        first = core.install_blender(info, exe, addon_archive, ROOT/'installer_blender.py', root/'backups', env, check_running=False)
         assert first['ok']
         # Repair/update and path changes must persist on a second fresh process.
         moved = root/'另一个位置/Surface Studio.exe'; moved.parent.mkdir(); moved.write_bytes(b'new-path')
-        second = core.install_blender(info, moved, ROOT/'surface_studio_bridge.zip', ROOT/'installer_blender.py', root/'backups', env, check_running=False)
+        second = core.install_blender(info, moved, addon_archive, ROOT/'installer_blender.py', root/'backups', env, check_running=False)
         assert second['ok'] and second['configured_path'] == str(moved)
         check = root/'check.py'
         check.write_text("import bpy\nassert not bpy.context.preferences.view.show_splash\nassert bpy.context.preferences.inputs.use_zoom_to_mouse\nassert bpy.context.preferences.filepaths.use_scripts_auto_execute\n", encoding='utf-8')

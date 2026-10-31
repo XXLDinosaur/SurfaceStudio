@@ -3,9 +3,10 @@ from updater import VERSION
 
 NOTES = {
     'version': VERSION,
-    'title': '贴花工作流与素材分类更新',
+    'title': 'SketchUp 联动与多软件拖放',
     'channel': '正式版',
     'sections': [
+        {'title':'SketchUp 连接','items':['安装器检测 SketchUp 2025 和 2026，可分别选择安装插件。','从 SS 拖动普通 PBR 材质到 SketchUp 模型，可用 Ctrl+Z 撤销。2026 已完成模拟安装测试，拖放待真机验证。']},
         {'title':'贴花图库与 Blender 联动','items':[
             '在材质库设置中添加贴花目录，一个子文件夹对应一份贴花。需要颜色贴图和 Opacity/Mask 遮罩。',
             '将预览图拖到 Blender 模型表面，创建独立贴花，保留原模型材质和 UV。',

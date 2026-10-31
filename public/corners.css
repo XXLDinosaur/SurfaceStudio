@@ -1,12 +1,74 @@
 /* Generous inset corners, with the OS-rendered outer edge left intact. */
-:root{--corner-panel:25px;--corner-card:18px;--corner-control:12px}
-.native-desktop .app{padding:12px;gap:12px}
-.sidebar,.main-shell,.detail{border-radius:var(--corner-panel)}
-.asset-card,.feature-main,.feature-side,dialog,.compare-tray{border-radius:var(--corner-card)}
-.workbench-controls .toolbar{border-radius:20px}
-.workspace,.nav-item,.category-item,.search-box,.view-buttons,select,.window-controls button{border-radius:var(--corner-control)}
-.native-desktop.window-maximized .app{padding:6px;gap:8px}
+:root {
+  --corner-panel: 25px;
+  --corner-card: 18px;
+  --corner-control: 12px;
+}
+.native-desktop .app {
+  padding: 12px;
+  gap: 12px;
+}
+.sidebar,
+.main-shell,
+.detail {
+  border-radius: var(--corner-panel);
+}
+.asset-card,
+.feature-main,
+.feature-side,
+dialog,
+.compare-tray {
+  border-radius: var(--corner-card);
+}
+.workbench-controls .toolbar {
+  border-radius: 20px;
+}
+.workspace,
+.nav-item,
+.category-item,
+.search-box,
+.view-buttons,
+select,
+.window-controls button {
+  border-radius: var(--corner-control);
+}
+.native-desktop.window-maximized .app {
+  padding: 6px;
+  gap: 8px;
+}
 
-.category-label{display:flex;align-items:center;gap:8px}.category-label #category-number{margin-left:auto}.category-label #new-category{width:28px;height:28px;flex-shrink:0}.category-label #new-category svg{width:16px;height:16px}#edit-material-category{margin-bottom:16px}
+.category-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.category-label #category-number {
+  margin-left: auto;
+}
+.category-label #new-category {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.category-label #new-category svg {
+  width: 16px;
+  height: 16px;
+}
+#edit-material-category {
+  margin-bottom: 16px;
+}
 
-.sidebar .nav-label{font-size:calc(var(--read-main) + 2px);font-weight:650;color:var(--ink);letter-spacing:0;line-height:1.5}.sidebar .nav-label>span{font-size:var(--read-small);font-weight:400}.sidebar .nav-label .icon-button{color:var(--ink-soft)}
+.sidebar .nav-label {
+  font-size: calc(var(--read-main) + 2px);
+  font-weight: 650;
+  color: var(--ink);
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+.sidebar .nav-label > span {
+  font-size: var(--read-small);
+  font-weight: 400;
+}
+.sidebar .nav-label .icon-button {
+  color: var(--ink-soft);
+}

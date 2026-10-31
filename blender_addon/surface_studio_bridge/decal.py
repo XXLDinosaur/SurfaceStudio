@@ -18,12 +18,38 @@ class SurfaceSlide:
             self.normals=[(normal_matrix@v.normal).normalized() for v in mesh.vertices]
             self.triangles=[tuple(t.vertices) for t in mesh.loop_triangles]
             self.tree=BVHTree.FromPolygons(self.vertices,self.triangles,all_triangles=True)
+            # Lock this gesture to the connected surface patch. Vertex normals
+            # may be smooth even across a cube edge; use geometry for barriers.
+            normals=[(self.vertices[b]-self.vertices[a]).cross(self.vertices[c]-self.vertices[a]).normalized()
+                     for a,b,c in self.triangles]
+            edges={}
+            neighbors=[set() for _ in self.triangles]
+            for i,triangle in enumerate(self.triangles):
+                for a,b in zip(triangle,triangle[1:]+triangle[:1]):
+                    edge=tuple(sorted((a,b)))
+                    for other in edges.get(edge,[]):
+                        if normals[i].dot(normals[other])>.70710678:
+                            neighbors[i].add(other);neighbors[other].add(i)
+                    edges.setdefault(edge,[]).append(i)
+            _,_,seed,_=self.tree.find_nearest(world.translation)
+            self.patch=set();pending=[] if seed is None else [seed]
+            while pending:
+                current=pending.pop()
+                if current in self.patch:continue
+                self.patch.add(current)
+                pending.extend(neighbors[current]-self.patch)
+            # Interpolate only within the patch: smooth curved motion without
+            # borrowing normals from the other side of a hard corner.
+            self.normals=[Vector((0,0,0)) for _ in self.vertices]
+            for i in self.patch:
+                for vertex in self.triangles[i]:self.normals[vertex]+=normals[i]
+            self.normals=[n.normalized() for n in self.normals]
         finally:evaluated.to_mesh_clear()
         self.world=world.copy()
 
     def move(self,origin,direction):
         point,normal,index,_=self.tree.ray_cast(origin,direction.normalized())
-        if point is None:return None
+        if point is None or index not in self.patch:return None
         ids=self.triangles[index]
         smooth=barycentric_transform(point,*(self.vertices[i] for i in ids),*(self.normals[i] for i in ids))
         if smooth.length>.001 and smooth.dot(normal)>0:normal=smooth.normalized()

@@ -1,16 +1,44 @@
 /* Soft daylight: neutral preview grounds and restrained glass highlights. */
-html[data-appearance="light"]{
- --bg:#bcc9cc;--panel:#d4dfdfa6;--raised:#dee6e6cc;--line:#52697429;
- --text:#293c46;--muted:#596f7a;--ink:#293c46;--ink-soft:#4b626e;--ink-muted:#5d7380;
- --glass:linear-gradient(145deg,#dfe8e7dc,#cfdbdda8 48%,#d6e0e7c4);
- --glass-soft:linear-gradient(140deg,#cfdbdcad,#c3d0d580);
- --glass-edge:#edf4f17a;--glass-shadow:0 8px 28px #35485c10,inset 0 1px 0 #eef5f073;
- --selected:#afc9c5a6;--input:#e1e8e566;--card:#d3dddfb3;
- --scene:radial-gradient(ellipse at 8% 3%,#b4cbc7 0,transparent 46%),radial-gradient(ellipse at 94% 20%,#bdccde 0,transparent 48%),radial-gradient(ellipse at 75% 100%,#d0c8be 0,transparent 48%),linear-gradient(140deg,#becdcd,#cbd3dc 48%,#cccac5);
+html[data-appearance="light"] {
+  --bg: #bcc9cc;
+  --panel: #d4dfdfa6;
+  --raised: #dee6e6cc;
+  --line: #52697429;
+  --text: #293c46;
+  --muted: #596f7a;
+  --ink: #293c46;
+  --ink-soft: #4b626e;
+  --ink-muted: #5d7380;
+  --glass: linear-gradient(145deg, #dfe8e7dc, #cfdbdda8 48%, #d6e0e7c4);
+  --glass-soft: linear-gradient(140deg, #cfdbdcad, #c3d0d580);
+  --glass-edge: #edf4f17a;
+  --glass-shadow: 0 8px 28px #35485c10, inset 0 1px 0 #eef5f073;
+  --selected: #afc9c5a6;
+  --input: #e1e8e566;
+  --card: #d3dddfb3;
+  --scene:
+    radial-gradient(ellipse at 8% 3%, #b4cbc7 0, transparent 46%),
+    radial-gradient(ellipse at 94% 20%, #bdccde 0, transparent 48%),
+    radial-gradient(ellipse at 75% 100%, #d0c8be 0, transparent 48%),
+    linear-gradient(140deg, #becdcd, #cbd3dc 48%, #cccac5);
 }
-html[data-appearance="light"] body:before{opacity:.25}
-html[data-appearance="light"] .card-image{background:radial-gradient(ellipse at center,#b7c1c4,#c7cfd1)!important}
-html[data-appearance="light"] .card-info{background:#d9e0e1!important;border-color:#6d838f24}
-html[data-appearance="light"] .list-mode .card-info{background:transparent!important}
-html[data-appearance="light"] .detail-preview{background:radial-gradient(ellipse at center,#b5c2c5,#c8d3d580)}
-html[data-appearance="light"] .nav-item.active{border-color:#739d9766;box-shadow:inset 0 1px 0 #e4efea66}
+html[data-appearance="light"] body:before {
+  opacity: 0.25;
+}
+html[data-appearance="light"] .card-image {
+  background: radial-gradient(ellipse at center, #b7c1c4, #c7cfd1) !important;
+}
+html[data-appearance="light"] .card-info {
+  background: #d9e0e1 !important;
+  border-color: #6d838f24;
+}
+html[data-appearance="light"] .list-mode .card-info {
+  background: transparent !important;
+}
+html[data-appearance="light"] .detail-preview {
+  background: radial-gradient(ellipse at center, #b5c2c5, #c8d3d580);
+}
+html[data-appearance="light"] .nav-item.active {
+  border-color: #739d9766;
+  box-shadow: inset 0 1px 0 #e4efea66;
+}

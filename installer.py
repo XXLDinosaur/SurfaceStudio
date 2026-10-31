@@ -7,6 +7,7 @@ import sys
 import threading
 
 import installer_core as core
+import installer_sketchup
 
 ROOT = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
 UPDATE_ARGS = None
@@ -29,7 +30,7 @@ class Setup:
             from update_handoff import validate_destination
             destination,ready=validate_destination(UPDATE_ARGS.update_destination,UPDATE_ARGS.ready_file)
             ready.write_text(json.dumps({'ready':True}),encoding='utf-8')
-        return {'destination': str(destination), 'ss_version': '1.6.0', 'addon_version': '1.3.0', 'updateMode':bool(UPDATE_ARGS)}
+        return {'destination': str(destination), 'ss_version': '1.7.0', 'addon_version': '1.3.1', 'updateMode':bool(UPDATE_ARGS)}
 
     def auto_update(self):
         if not UPDATE_ARGS:return {'error':'不是更新模式'}
@@ -49,8 +50,8 @@ class Setup:
     def scan(self):
         if not self._guard.acquire(blocking=False): return {'error': '正在处理，请稍候'}
         try:
-            self._status.update(busy=True, stage='正在检测 Blender 版本…')
-            self._items = core.discover(ROOT/'installer_blender.py')
+            self._status.update(busy=True, stage='正在检测 Blender 和 SketchUp…')
+            self._items = core.discover(ROOT/'installer_blender.py') + installer_sketchup.discover()
             return {'items': self._items}
         except Exception as exc: return {'error': str(exc)}
         finally:
@@ -94,6 +95,14 @@ class Setup:
             installed_profiles = set()
             for path in selected:
                 info = choices[path]
+                if info.get('host') == 'SketchUp':
+                    title = 'SketchUp ' + info['version_string']
+                    try:
+                        installer_sketchup.install(info, PAYLOAD/'SurfaceStudio-SketchUp.rbz', executable.parent/'data/installer-backups')
+                        results.append({'ok': True, 'title': title, 'message': '插件已安装，重新启动 SketchUp 后生效'})
+                    except Exception as exc:
+                        results.append({'ok': False, 'title': title, 'message': str(exc)})
+                    continue
                 # Two patch versions often share one Blender user configuration.
                 profile = (os.path.normcase(info['config']), os.path.normcase(info['scripts']))
                 if profile in installed_profiles:
@@ -115,7 +124,7 @@ class Setup:
             self._status['stage'] = '安装完成' if all(r['ok'] for r in results) else 'SS 已安装，部分项目需要处理后重试'
             report = executable.parent/'data/installer-report.json'
             report.parent.mkdir(parents=True, exist_ok=True)
-            report.write_text(json.dumps({'software': '1.6.0', 'addon': '1.3.0', 'results': results}, ensure_ascii=False, indent=2), encoding='utf-8')
+            report.write_text(json.dumps({'software': '1.7.0', 'addon': '1.3.1', 'results': results}, ensure_ascii=False, indent=2), encoding='utf-8')
             return {'results': results, 'installed': str(executable)}
         except Exception as exc:
             self._status['stage'] = '安装未完成'

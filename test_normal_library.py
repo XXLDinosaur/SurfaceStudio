@@ -60,14 +60,14 @@ class NormalLibraryTests(unittest.TestCase):
         app.STATE['favorites']=[first['id']];app.STATE['collections']=[{'id':'water','name':'水','ids':[second['id']]}]
         assigned_category='Water' if 'Water' in app.CATEGORIES else 'Grass'
         app.edit_category({'action':'assign','asset':second['id'],'category':assigned_category})
-        backup=app.organizer.export(SimpleNamespace(**vars(app)))
+        backup=app.organizer.export(app.APP.snapshot_for_test())
         self.assertEqual(len(set(backup['materials'].values())),4)
         relocated=self.base/'other-drive';self.normals.rename(relocated);app.CONFIG['normalRoot']=str(relocated);app.scan()
         moved={a['libraryKey']:a for a in app.ASSETS.values() if a.get('kind')=='normal'}
         self.assertNotIn(first['id'],app.ASSETS)
         first_id=moved[first['libraryKey']]['id'];second_id=moved[second['libraryKey']]['id']
         app.STATE={'favorites':[],'collections':[],'recent':[]};(app.DATA/'categories.json').unlink()
-        app.organizer.handle(SimpleNamespace(**vars(app)),{'action':'restore','backup':backup})
+        app.organizer.handle(app.APP.snapshot_for_test(),{'action':'restore','backup':backup})
         self.assertEqual(app.STATE['favorites'],[first_id])
         self.assertEqual(app.STATE['collections'][0]['ids'],[second_id])
         self.assertEqual(next(a for a in app.categorized_library()['assets'] if a['id']==second_id)['category'],assigned_category)

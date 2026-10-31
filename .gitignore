@@ -23,3 +23,7 @@ test_native_window.py
 test_blender_live.py
 publish_github.py
 github-release.json
+
+node_modules/
+test-results/
+playwright-report/
