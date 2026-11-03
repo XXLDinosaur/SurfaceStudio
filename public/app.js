@@ -359,6 +359,7 @@ let assetType = "",
 const assetTypeNames = {
   uncategorized: "未分类",
   material: "材质",
+  texture: "贴图",
   normal: "法线",
   decal: "贴花",
 };

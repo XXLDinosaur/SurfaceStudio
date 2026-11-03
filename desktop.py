@@ -192,7 +192,7 @@ def run_primary(instance):
     import service_discovery
     import server
     saved=server.read_json(server.DATA/'index.json',None)
-    if saved and saved.get('decalRoot','')==server.CONFIG.get('decalRoot','') and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==server.CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==server.CONFIG.get('materialSaveRoot',''):
+    if saved and saved.get('textureRoot','') == server.CONFIG.get('textureRoot','') and saved.get('decalRoot','')==server.CONFIG.get('decalRoot','') and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==server.CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==server.CONFIG.get('materialSaveRoot',''):
         server.INDEX=saved
         server.ASSETS={a['id']:a for a in saved['assets']}
     else: server.scan()

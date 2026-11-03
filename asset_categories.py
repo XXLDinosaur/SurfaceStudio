@@ -40,6 +40,7 @@ LABELS={key:label for key,label,_ in RULES}
 def asset_group(asset):
     if asset.get('kind')=='decal':return 'decal'
     if asset.get('kind')=='normal' or asset.get('normalOnly'):return 'normal'
+    if asset.get('kind')=='image':return 'texture'
     return 'material'
 
 def automatic_category(asset):
@@ -50,5 +51,6 @@ def automatic_category(asset):
         # English word boundaries prevent e.g. "sand" matching "sandal".
         for term in pattern.split('|'):
             if re.search(r'(?<![a-z])(?:'+term+r')(?![a-z])' if term.isascii() else term,name):return key
+    if asset_group(asset)=='texture':return 'Other'
     fallback=asset.get('category','Uncategorized')
     return 'Uncategorized' if fallback in {'Decal','NormalOnly','Other','Misc'} else fallback

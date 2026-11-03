@@ -21,7 +21,7 @@ export function createNavigation(ctx) {
             !ctx.nature,
         ),
       );
-    ctx.$("#category-number").textContent = "4";
+    ctx.$("#category-number").textContent = String(Object.keys(ctx.assetTypeNames).length);
     ctx.$("#categories").innerHTML = Object.entries(ctx.assetTypeNames)
       .map(([type, label]) => {
         const items = ctx.assets.filter((a) => ctx.assetInType(a, type)),

@@ -54,8 +54,8 @@ import { app as ctx } from "./modules/runtime.js";
           ? entry("拖到模型表面添加贴花", "arrow", () =>
               ctx.toast("按住贴花预览图，拖到 Blender 模型表面松开"),
             )
-          : entry("赋予到 Blender", "arrow", () =>
-              window.surfaceBlender.applyFromMenu(id),
+          : entry("拖到模型表面", "arrow", () =>
+              ctx.toast(asset.kind === "blend" ? "按住预览图拖到 Blender 模型上" : "按住预览图拖到 Blender 或 SketchUp 模型上"),
             ),
         null,
         entry(
@@ -202,3 +202,5 @@ import { app as ctx } from "./modules/runtime.js";
     true,
   );
 })();
+
+

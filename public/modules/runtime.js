@@ -4,7 +4,7 @@
  * @property {string} name
  * @property {string} category
  * @property {string} categoryZh
- * @property {'material'|'normal'|'decal'} assetGroup
+ * @property {'material'|'texture'|'normal'|'decal'} assetGroup
  * @property {Array<{name:string,channel:string,ext:string}>} maps
  * @property {string} [kind]
  *

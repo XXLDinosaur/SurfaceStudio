@@ -3,9 +3,10 @@ from updater import VERSION
 
 NOTES = {
     'version': VERSION,
-    'title': 'SketchUp 联动与多软件拖放',
+    'title': '单张贴图材质识别',
     'channel': '正式版',
     'sections': [
+        {'title':'单图材质','items':['普通材质库支持根目录和子目录中的单张贴图。普通图片逐张显示，可拖到 SketchUp 或 Blender 作为颜色贴图。']},
         {'title':'SketchUp 连接','items':['安装器检测 SketchUp 2025 和 2026，可分别选择安装插件。','从 SS 拖动普通 PBR 材质到 SketchUp 模型，可用 Ctrl+Z 撤销。2026 已完成模拟安装测试，拖放待真机验证。']},
         {'title':'贴花图库与 Blender 联动','items':[
             '在材质库设置中添加贴花目录，一个子文件夹对应一份贴花。需要颜色贴图和 Opacity/Mask 遮罩。',

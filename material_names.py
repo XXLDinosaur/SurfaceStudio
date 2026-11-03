@@ -37,7 +37,7 @@ def rename_material(app, ident, name):
     root=Path(asset.get('sourceRoot') or app.INDEX['root']).resolve()
     folder=root/asset['folder']
     if folder.is_symlink() or folder.is_junction() or not folder.resolve().is_relative_to(root):raise ValueError('材质路径无效')
-    single=asset.get('kind')=='normal'
+    single=asset.get('kind') in ('normal','image')
     source=folder/asset['preview'] if single else folder
     if source.is_symlink() or source.is_junction() or not source.exists():raise ValueError('材质已移动或路径无效')
     if not single and source.resolve()==root:raise ValueError('不能重命名材质库根目录，请先将该材质置于独立子文件夹')

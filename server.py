@@ -132,16 +132,17 @@ def scan():
             raise ValueError('材质库路径不存在或无法读取')
         result, warnings = ([], [])
         normal_root = configuration.get('normalRoot', '')
-        for folder in sorted(root.iterdir()):
-            if not folder.is_dir() or folder.name.startswith('.') or (folder / 'surface-material.json').exists():
-                continue
-            if configuration.get('decalRoot') and folder.resolve().is_relative_to(Path(configuration['decalRoot']).resolve()):
-                continue
-            if normal_root and folder.resolve().is_relative_to(Path(normal_root).resolve()):
+        reserved = {Path(value).resolve() for value in (normal_root, configuration.get('decalRoot'), configuration.get('textureRoot')) if value}
+        for directory, dirs, names in os.walk(root, followlinks=False):
+            folder = Path(directory)
+            dirs[:] = sorted(name for name in dirs if not name.startswith('.') and
+                             not (folder/name).is_symlink() and not (folder/name).is_junction())
+            if folder.resolve() in reserved or 'surface-material.json' in names:
+                dirs.clear()
                 continue
             try:
-                files = [f for f in folder.iterdir() if f.is_file()]
-                meta_file = next((f for f in files if f.suffix.lower() == '.json' and (not f.name.startswith('.'))), None)
+                files = [folder/name for name in sorted(names) if not name.startswith('.') and not (folder/name).is_symlink()]
+                meta_file = next((f for f in files if f.suffix.lower() == '.json' and not f.name.endswith('.surface.json')), None)
                 meta = read_json(meta_file, {}) if meta_file else {}
                 image_files = [f for f in files if f.suffix.lower() in ('.jpg', '.jpeg', '.png', '.exr', '.tif', '.tiff')]
                 if not image_files:
@@ -153,6 +154,27 @@ def scan():
                         continue
                     channel = next((v for k, v in [('albedo', 'Albedo'), ('basecolor', 'Albedo'), ('diffuse', 'Albedo'), ('normal', 'Normal'), ('roughness', 'Roughness'), ('displacement', 'Displacement'), ('height', 'Displacement'), ('metalness', 'Metalness'), ('metallic', 'Metalness'), ('_ao', 'AO'), ('opacity', 'Opacity'), ('specular', 'Specular'), ('gloss', 'Gloss')] if k in f.name.lower()), 'Other')
                     maps.append({'name': f.name, 'channel': channel, 'bytes': f.stat().st_size, 'ext': f.suffix[1:].upper()})
+                # Loose images are independent materials. Preserve multi-channel
+                # packages (including packages with unnamed auxiliary images).
+                channels = {m['channel'] for m in maps} - {'Other'}
+                package = folder != root and ((meta_file and (channels or len(maps) == 1)) or (folder/'.surface-studio.json').is_file()
+                            or len(channels) >= 2 or (len(maps) == 1 and (channels or preview)))
+                if not package:
+                    for entry in maps:
+                        path = folder/entry['name']
+                        key = 'image:' + path.relative_to(root).as_posix()
+                        ident = hashlib.sha1(key.encode()).hexdigest()[:16]
+                        channel = 'Albedo' if entry['channel'] == 'Other' else entry['channel']
+                        item = dict(id=ident, assetId=ident, libraryKey=key, kind='image',
+                                    name=path.stem, folder=folder.relative_to(root).as_posix(),
+                                    category='Other', categoryZh=CATEGORIES['Other'], tags=[], categories=[],
+                                    search=key.lower(), resolution='—', preview=path.name,
+                                    maps=[{**entry, 'channel':channel}], bytes=entry['bytes'],
+                                    modified=path.stat().st_mtime, meta={})
+                        result.append(material_names.apply_metadata(item,path.with_name(path.name+'.surface.json')))
+                    continue
+                if len(maps) == 1 and maps[0]['channel'] == 'Other':
+                    maps[0]['channel'] = 'Albedo'
                 preview = preview or next((f for f in image_files if 'albedo' in f.name.lower()), image_files[0])
                 cat = folder.name.split('_')[0] or 'Other'
                 if cat not in CATEGORIES:
@@ -162,9 +184,9 @@ def scan():
                 cats = [str(c) for c in meta.get('categories', []) if isinstance(c, str)]
                 translated = ' '.join((WORDS.get(w, w) for w in re.findall('[a-z]+', ' '.join([display, folder.name] + tags + cats).lower())))
                 resolution = re.search('(?:^|_)(\\d+)K(?:_|$)', folder.name, re.I)
-                ident = hashlib.sha1(folder.name.encode()).hexdigest()[:16]
+                ident = hashlib.sha1(folder.relative_to(root).as_posix().encode()).hexdigest()[:16]
                 details = {m['key']: m.get('value') for m in meta.get('meta', []) if isinstance(m, dict) and 'key' in m}
-                item = {'id': ident, 'name': display, 'folder': folder.name, 'assetId': str(meta.get('id') or (meta_file.stem if meta_file else ident)), 'category': cat, 'categoryZh': CATEGORIES[cat], 'tags': tags, 'categories': cats, 'search': translated, 'resolution': resolution.group(1) + 'K' if resolution else '—', 'preview': preview.name, 'maps': maps, 'bytes': sum((f.stat().st_size for f in files)), 'modified': folder.stat().st_mtime, 'meta': details}
+                item = {'id': ident, 'name': display, 'folder': folder.relative_to(root).as_posix(), 'assetId': str(meta.get('id') or (meta_file.stem if meta_file else ident)), 'category': cat, 'categoryZh': CATEGORIES[cat], 'tags': tags, 'categories': cats, 'search': translated, 'resolution': resolution.group(1) + 'K' if resolution else '—', 'preview': preview.name, 'maps': maps, 'bytes': sum((f.stat().st_size for f in files)), 'modified': folder.stat().st_mtime, 'meta': details}
                 item = material_names.apply_metadata(item, folder / '.surface-studio.json')
                 if item['category'] not in CATEGORIES:
                     item['category'] = cat
@@ -172,14 +194,16 @@ def scan():
                 result.append(item)
             except (OSError, ValueError, TypeError) as exc:
                 warnings.append(f'{folder.name}: {exc}')
+        if configuration.get("textureRoot"):
+            result.extend(scan_normals(configuration["textureRoot"], warnings, texture=True))
         if normal_root:
             result.extend(scan_normals(normal_root, warnings))
         result.extend(scan_decals(configuration.get('decalRoot', ''), warnings))
         result.extend(scan_blender_materials([str(root), *configuration.get('blenderRoots', []), *([configuration['materialSaveRoot']] if configuration.get('materialSaveRoot') else [])], warnings))
         if not result:
-            warnings.append('未找到可导入素材：普通库需要“库/材质文件夹/贴图”结构；单张法线请使用法线贴图库。支持 JPG、JPEG、PNG、TIF、TIFF、EXR。')
+            warnings.append('未找到可导入素材：普通库支持单张图片和 PBR 材质文件夹；单张法线请使用法线贴图库。支持 JPG、JPEG、PNG、TIF、TIFF、EXR。')
         counts = Counter((a['category'] for a in result))
-        new_index = {'assets': result, 'categories': [{'id': k, 'name': CATEGORIES[k], 'count': v} for k, v in counts.most_common()], 'root': str(root), 'normalRoot': normal_root, 'decalRoot': configuration.get('decalRoot', ''), 'blenderRoots': configuration.get('blenderRoots', []), 'materialSaveRoot': configuration.get('materialSaveRoot', ''), 'scannedAt': time.time(), 'totalBytes': sum((a['bytes'] for a in result)), 'warnings': warnings}
+        new_index = {'assets': result, 'categories': [{'id': k, 'name': CATEGORIES[k], 'count': v} for k, v in counts.most_common()], 'root': str(root), 'normalRoot': normal_root, 'textureRoot': configuration.get('textureRoot', ''), 'decalRoot': configuration.get('decalRoot', ''), 'blenderRoots': configuration.get('blenderRoots', []), 'materialSaveRoot': configuration.get('materialSaveRoot', ''), 'scannedAt': time.time(), 'totalBytes': sum((a['bytes'] for a in result)), 'warnings': warnings}
         with APP.LOCK:
             if configuration == APP.CONFIG:
                 save_json(APP.DATA / 'index.json', new_index)
@@ -205,6 +229,8 @@ def asset_file(ident, name):
         raise ValueError('文件不存在')
     root = Path(a.get('sourceRoot') or APP.INDEX['root']).resolve()
     allowed_roots = [APP.INDEX['root'], *APP.INDEX.get('blenderRoots', []), *([APP.INDEX['materialSaveRoot']] if APP.INDEX.get('materialSaveRoot') else [])] if a.get('kind') == 'blend' else [APP.INDEX.get('normalRoot') or APP.INDEX['root']]
+    if a.get('kind') == 'image':
+        allowed_roots = [APP.INDEX['root'], APP.INDEX.get('textureRoot','')]
     if a.get('kind') == 'decal':
         allowed_roots = [APP.INDEX.get('decalRoot', '')]
     if a.get('sourceRoot') and root not in [Path(r).resolve() for r in allowed_roots]:
@@ -381,6 +407,17 @@ class Handler(BaseHTTPRequestHandler):
                             raise ValueError('贴花库不能与纯法线目录重叠')
                         if Path(root).resolve().is_relative_to(Path(normal_root)):
                             raise ValueError('法线贴图库应使用独立文件夹，不能包含普通素材库')
+                    texture_root = body.get('textureRoot', APP.CONFIG.get('textureRoot', ''))
+                    if not isinstance(texture_root, str):
+                        raise ValueError('贴图库路径无效')
+                    texture_root = texture_root.strip()
+                    if texture_root:
+                        path = Path(texture_root).resolve()
+                        if not path.is_dir() or Path(root).resolve().is_relative_to(path):
+                            raise ValueError('贴图库须为有效独立目录，不能包含主材质库')
+                        if any(path.is_relative_to(Path(x)) or Path(x).is_relative_to(path) for x in (normal_root,decal_root) if x):
+                            raise ValueError('贴图库不能与法线或贴花库重叠')
+                        texture_root = str(path)
                     blender_roots = body.get('blenderRoots', APP.CONFIG.get('blenderRoots', []))
                     if not isinstance(blender_roots, list) or len(blender_roots) > 32:
                         raise ValueError('Blender 材质目录最多 32 个')
@@ -406,6 +443,7 @@ class Handler(BaseHTTPRequestHandler):
                     APP.CONFIG['materialSaveRoot'] = save_root
                     APP.CONFIG['blenderRoots'] = validated_roots
                     APP.CONFIG['root'] = str(Path(root).resolve())
+                    APP.CONFIG['textureRoot'] = texture_root
                     APP.CONFIG['normalRoot'] = normal_root
                     APP.CONFIG['decalRoot'] = decal_root
                     save_json(APP.DATA / 'config.json', APP.CONFIG)
@@ -420,10 +458,11 @@ organizer.recover(APP)
 
 if __name__ == '__main__':
     saved = read_json(APP.DATA / 'index.json', None)
-    if saved and saved.get('decalRoot', '') == APP.CONFIG.get('decalRoot', '') and (saved.get('root') == APP.CONFIG['root']) and (saved.get('normalRoot', '') == APP.CONFIG.get('normalRoot', '')) and (saved.get('blenderRoots', []) == APP.CONFIG.get('blenderRoots', [])) and (saved.get('materialSaveRoot', '') == APP.CONFIG.get('materialSaveRoot', '')):
+    if saved and saved.get('textureRoot','') == APP.CONFIG.get('textureRoot','') and saved.get('decalRoot', '') == APP.CONFIG.get('decalRoot', '') and (saved.get('root') == APP.CONFIG['root']) and (saved.get('normalRoot', '') == APP.CONFIG.get('normalRoot', '')) and (saved.get('blenderRoots', []) == APP.CONFIG.get('blenderRoots', [])) and (saved.get('materialSaveRoot', '') == APP.CONFIG.get('materialSaveRoot', '')):
         APP.INDEX = saved
         APP.ASSETS = {a['id']: a for a in APP.INDEX['assets']}
     else:
         scan()
     print(f'Surface Studio http://127.0.0.1:{APP.PORT} | {len(APP.ASSETS)} materials', flush=True)
     ThreadingHTTPServer(('127.0.0.1', APP.PORT), Handler).serve_forever()
+
