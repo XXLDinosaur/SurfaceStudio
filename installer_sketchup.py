@@ -31,7 +31,7 @@ def installations():
 def discover(entries=None):
     found = {}
     for name, location in installations() if entries is None else entries:
-        if name not in ('SketchUp 2025', 'SketchUp 2026'):
+        if name not in tuple('SketchUp '+year for year in ('2023', '2024', '2025', '2026')):
             continue
         for exe in (location/'SketchUp.exe', location/'SketchUp/SketchUp.exe'):
             if exe.is_file():
@@ -43,7 +43,7 @@ def discover(entries=None):
 
 def install(info, archive, backup_root, appdata=None):
     year = info['version_string']
-    if year not in ('2025', '2026') or not Path(info['path']).is_file():
+    if year not in ('2023', '2024', '2025', '2026') or not Path(info['path']).is_file():
         raise ValueError('请重新检测 SketchUp 安装位置')
     target = Path(appdata or os.environ['APPDATA'])/'SketchUp'/('SketchUp '+year)/'SketchUp/Plugins'
     backup_root.mkdir(parents=True, exist_ok=True)

@@ -37,13 +37,15 @@ module SSSurfaceStudio
       next unless channel == 'Albedo' || CHANNELS.key?(channel)
       maps[channel] ||= File.join(folder, map.fetch('name'))
     end
-    raise '素材没有可用的 PBR 贴图。' if maps.empty?
+    supported = Sketchup::Material.instance_methods.include?(:normal_texture=)
+    raise '此版本 SketchUp 不支持纯法线等 PBR 通道，请选择带颜色贴图的材质或单张贴图。' if !maps['Albedo'] && !supported
+    raise '素材没有可用的贴图。' if maps.empty?
     model.start_operation('SS 赋予材质', true)
     begin
       mat = model.materials.add(asset.fetch('name'))
       mat.texture = maps['Albedo'] if maps['Albedo']
       CHANNELS.each do |channel, key|
-        next unless maps[channel]
+        next unless maps[channel] && mat.respond_to?("#{key}_texture=")
         mat.public_send("#{key}_texture=", maps.fetch(channel))
         mat.public_send("#{key}_enabled=", true) if mat.respond_to?("#{key}_enabled=")
       end
@@ -65,7 +67,7 @@ module SSSurfaceStudio
     raise '请先设置 SS 材质库。' unless File.directory?(root)
     textures = {'Albedo' => mat.texture}
     CHANNELS.each do |channel, key|
-      textures[channel] = mat.public_send("#{key}_texture") if mat.public_send("#{key}_enabled?")
+      textures[channel] = mat.public_send("#{key}_texture") if mat.respond_to?("#{key}_enabled?") && mat.respond_to?("#{key}_texture") && mat.public_send("#{key}_enabled?")
     end
     raise '所选材质没有可导出的贴图。' if textures.values.compact.empty?
     staging = Dir.mktmpdir('.ss-su-', root)
