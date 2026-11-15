@@ -12,6 +12,9 @@ import material_names
 import asset_categories
 from release_notes import NOTES
 from normal_library import scan_normals
+from hdr_library import scan_hdrs, hdr_thumbnail, validate_hdr_root
+from hdr_categories import LABELS as HDR_LABELS
+from preview_cache import HDRPreviewCache
 from decal_library import scan_decals
 from blender_library import scan_blender_materials
 from app_context import ApplicationContext, expose_legacy_state
@@ -33,6 +36,9 @@ CATEGORIES = {'Decal': '贴花', 'Concrete': '混凝土', 'Soil': '土壤', 'Gra
 CATEGORIES.update(asset_categories.LABELS)
 WORDS = {'rough': '粗糙', 'smooth': '光滑', 'coarse': '粗粒', 'fine': '细腻', 'cracked': '开裂', 'cracks': '裂纹', 'damaged': '破损', 'old': '老旧', 'painted': '涂漆', 'dirty': '脏污', 'clean': '干净', 'dry': '干燥', 'dried': '干燥', 'wet': '潮湿', 'mossy': '苔藓', 'moss': '苔藓', 'forest': '森林', 'gravel': '砾石', 'pebbles': '卵石', 'mud': '泥土', 'sandy': '沙质', 'snow': '雪', 'red': '红色', 'green': '绿色', 'blue': '蓝色', 'grey': '灰色', 'gray': '灰色', 'white': '白色', 'black': '黑色', 'brown': '棕色', 'yellow': '黄色', 'rusty': '锈蚀', 'rust': '铁锈', 'rusted': '锈蚀', 'brick': '砖', 'bricks': '砖', 'marble': '大理石', 'granite': '花岗岩', 'tiles': '瓷砖', 'tile': '瓷砖', 'wood': '木', 'wooden': '木质', 'planks': '木板', 'asphalt': '沥青', 'concrete': '混凝土', 'leather': '皮革', 'fabric': '织物', 'rock': '岩石', 'stone': '石材', 'sandstone': '砂岩', 'limestone': '石灰岩', 'ground': '地面', 'soil': '土壤', 'grass': '草地', 'metal': '金属', 'paper': '纸', 'bark': '树皮', 'floor': '地板', 'wall': '墙', 'road': '道路', 'cliff': '峭壁', 'beach': '海滩', 'leaves': '落叶', 'cobblestone': '鹅卵石', 'pavement': '路面', 'plaster': '灰泥', 'dirt': '泥土', 'debris': '碎屑', 'surface': '表面'}
 
+CATEGORIES['HDR'] = 'HDR 环境'
+CATEGORIES.update(HDR_LABELS)
+
 def read_json(path, default):
     try:
         return json.loads(path.read_text(encoding='utf-8-sig'))
@@ -52,6 +58,32 @@ APP.SCANNING = False
 APP.SCAN_ERROR = None
 APP.ASSETS = {}
 APP.BRIDGE = BlenderBridge(APP.DATA / 'blender')
+HDR_PREVIEWS = HDRPreviewCache()
+PREVIEW_WARMUP_ENABLED = False
+
+
+def schedule_hdr_previews():
+    if not PREVIEW_WARMUP_ENABLED:
+        return
+    with APP.LOCK:
+        _, _, edits = category_data()
+        groups = {}
+        for asset in APP.INDEX['assets']:
+            if asset.get('kind') == 'hdr':
+                category = edits['assignments'].get(asset['id'], asset_categories.automatic_category(asset))
+                groups.setdefault(category, []).append((asset['id'], asset['preview']))
+        # Round-robin scene groups mirrors the default curated card ordering.
+        entries = [group[index] for index in range(max(map(len, groups.values()), default=0))
+                   for group in groups.values() if index < len(group)]
+        directory = APP.CACHE
+    HDR_PREVIEWS.schedule(entries, directory, hdr_thumbnail,
+                          resolve=lambda entry: asset_file(*entry))
+
+
+def start_preview_cache():
+    global PREVIEW_WARMUP_ENABLED
+    PREVIEW_WARMUP_ENABLED = True
+    schedule_hdr_previews()
 
 def category_data():
     data = read_json(APP.DATA / 'categories.json', {})
@@ -63,6 +95,11 @@ def categorized_library():
     catalog = {**CATEGORIES, **asset_categories.LABELS, **edits['custom'], **edits.get('names', {})}
     items = []
     for source in APP.INDEX['assets']:
+        if source.get('kind') == 'hdr':
+            # 1.8.0 stored "天空" as a generic HDR search term. Rebuild from
+            # the actual name/path so cached non-sky assets stop matching it.
+            source = {**source, 'search': ' '.join((str(source.get('name', '')),
+                       str(source.get('folder', '')), 'hdr hdri 环境')).lower()}
         automatic = asset_categories.automatic_category(source)
         category = edits['assignments'].get(source['id'], automatic)
         if category == 'Blender':
@@ -132,7 +169,7 @@ def scan():
             raise ValueError('材质库路径不存在或无法读取')
         result, warnings = ([], [])
         normal_root = configuration.get('normalRoot', '')
-        reserved = {Path(value).resolve() for value in (normal_root, configuration.get('decalRoot'), configuration.get('textureRoot')) if value}
+        reserved = {Path(value).resolve() for value in (normal_root, configuration.get('decalRoot'), configuration.get('textureRoot'), configuration.get('hdrRoot')) if value}
         for directory, dirs, names in os.walk(root, followlinks=False):
             folder = Path(directory)
             dirs[:] = sorted(name for name in dirs if not name.startswith('.') and
@@ -198,17 +235,19 @@ def scan():
             result.extend(scan_normals(configuration["textureRoot"], warnings, texture=True))
         if normal_root:
             result.extend(scan_normals(normal_root, warnings))
+        result.extend(scan_hdrs(configuration.get('hdrRoot', ''), warnings))
         result.extend(scan_decals(configuration.get('decalRoot', ''), warnings))
         result.extend(scan_blender_materials([str(root), *configuration.get('blenderRoots', []), *([configuration['materialSaveRoot']] if configuration.get('materialSaveRoot') else [])], warnings))
         if not result:
             warnings.append('未找到可导入素材：普通库支持单张图片和 PBR 材质文件夹；单张法线请使用法线贴图库。支持 JPG、JPEG、PNG、TIF、TIFF、EXR。')
         counts = Counter((a['category'] for a in result))
-        new_index = {'assets': result, 'categories': [{'id': k, 'name': CATEGORIES[k], 'count': v} for k, v in counts.most_common()], 'root': str(root), 'normalRoot': normal_root, 'textureRoot': configuration.get('textureRoot', ''), 'decalRoot': configuration.get('decalRoot', ''), 'blenderRoots': configuration.get('blenderRoots', []), 'materialSaveRoot': configuration.get('materialSaveRoot', ''), 'scannedAt': time.time(), 'totalBytes': sum((a['bytes'] for a in result)), 'warnings': warnings}
+        new_index = {'assets': result, 'categories': [{'id': k, 'name': CATEGORIES[k], 'count': v} for k, v in counts.most_common()], 'root': str(root), 'hdrRoot': configuration.get('hdrRoot', ''), 'normalRoot': normal_root, 'textureRoot': configuration.get('textureRoot', ''), 'decalRoot': configuration.get('decalRoot', ''), 'blenderRoots': configuration.get('blenderRoots', []), 'materialSaveRoot': configuration.get('materialSaveRoot', ''), 'scannedAt': time.time(), 'totalBytes': sum((a['bytes'] for a in result)), 'warnings': warnings}
         with APP.LOCK:
             if configuration == APP.CONFIG:
                 save_json(APP.DATA / 'index.json', new_index)
                 APP.INDEX = new_index
                 APP.ASSETS = {a['id']: a for a in result}
+                schedule_hdr_previews()
     except Exception as exc:
         with APP.LOCK:
             if configuration == APP.CONFIG: APP.SCAN_ERROR = str(exc)
@@ -233,6 +272,8 @@ def asset_file(ident, name):
         allowed_roots = [APP.INDEX['root'], APP.INDEX.get('textureRoot','')]
     if a.get('kind') == 'decal':
         allowed_roots = [APP.INDEX.get('decalRoot', '')]
+    if a.get('kind') == 'hdr':
+        allowed_roots = [APP.INDEX.get('hdrRoot', '')]
     if a.get('sourceRoot') and root not in [Path(r).resolve() for r in allowed_roots]:
         raise ValueError('素材来源不匹配，请重新扫描')
     path = (root / a['folder'] / name).resolve()
@@ -272,6 +313,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send({**categorized_library(), 'state': APP.STATE, 'token': APP.TOKEN, 'scanning': APP.SCANNING, 'error': APP.SCAN_ERROR, 'releaseNotes': NOTES, 'releaseNotesSeen': read_json(APP.DATA / 'release-notes.json', {}).get('seenVersion') == NOTES['version']})
             if url.path == '/api/status':
                 return self.send({'scanning': APP.SCANNING, 'error': APP.SCAN_ERROR, 'count': len(APP.ASSETS)})
+            if url.path == '/api/preview-cache':
+                return self.send(HDR_PREVIEWS.status())
             if url.path == '/api/state':
                 return self.send(APP.STATE)
             if url.path == '/api/blender/status':
@@ -279,8 +322,13 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == '/api/blender/result':
                 return self.send(APP.BRIDGE.result(q.get('id', [''])[0]))
             if url.path == '/api/image':
-                path = asset_file(q.get('id', [''])[0], q.get('file', [''])[0])
+                with APP.LOCK:
+                    path = asset_file(q.get('id', [''])[0], q.get('file', [''])[0])
+                    is_hdr = APP.ASSETS[q.get('id', [''])[0]].get('kind') == 'hdr'
                 size = min(2048, max(64, int(q.get('size', ['480'])[0])))
+                if is_hdr:
+                    data = HDR_PREVIEWS.get(path, size, APP.CACHE, hdr_thumbnail)
+                    return self.send(data, 'image/webp', cache=True)
                 key = hashlib.sha1(f'v2|{path}|{path.stat().st_mtime_ns}|{size}'.encode()).hexdigest()
                 cached = APP.CACHE / (key + '.webp')
                 if not cached.exists():
@@ -348,6 +396,10 @@ class Handler(BaseHTTPRequestHandler):
                             raise ValueError('贴图已移动或丢失，请重新扫描素材库')
                         maps.append({**m, 'path': str(path)})
                     manifest = {'id': a['id'], 'name': a['name'], 'assetId': a['assetId'], 'root': a.get('sourceRoot') or APP.INDEX['root'], 'folder': a['folder'], 'maps': maps}
+                    if a.get('kind') == 'hdr':
+                        if endpoint != '/api/blender/drop':
+                            raise ValueError('HDR 请拖到 Blender 视口，应用为当前场景世界环境')
+                        manifest['kind'] = 'hdr'
                     if a.get('kind') == 'decal':
                         manifest['kind'] = 'decal'
                         if endpoint != '/api/blender/drop':
@@ -440,6 +492,9 @@ class Handler(BaseHTTPRequestHandler):
                         save_root = str(Path(save_root).resolve())
                         if normal_root and (Path(save_root).is_relative_to(Path(normal_root)) or Path(normal_root).is_relative_to(Path(save_root))):
                             raise ValueError('材质保存位置不能与纯法线目录重叠')
+                    hdr_root = validate_hdr_root(body.get('hdrRoot', APP.CONFIG.get('hdrRoot', '')),
+                                                 [root, texture_root, normal_root, decal_root, save_root, *validated_roots])
+                    APP.CONFIG['hdrRoot'] = hdr_root
                     APP.CONFIG['materialSaveRoot'] = save_root
                     APP.CONFIG['blenderRoots'] = validated_roots
                     APP.CONFIG['root'] = str(Path(root).resolve())
@@ -458,11 +513,12 @@ organizer.recover(APP)
 
 if __name__ == '__main__':
     saved = read_json(APP.DATA / 'index.json', None)
-    if saved and saved.get('textureRoot','') == APP.CONFIG.get('textureRoot','') and saved.get('decalRoot', '') == APP.CONFIG.get('decalRoot', '') and (saved.get('root') == APP.CONFIG['root']) and (saved.get('normalRoot', '') == APP.CONFIG.get('normalRoot', '')) and (saved.get('blenderRoots', []) == APP.CONFIG.get('blenderRoots', [])) and (saved.get('materialSaveRoot', '') == APP.CONFIG.get('materialSaveRoot', '')):
+    if saved and saved.get('hdrRoot','') == APP.CONFIG.get('hdrRoot','') and saved.get('textureRoot','') == APP.CONFIG.get('textureRoot','') and saved.get('decalRoot', '') == APP.CONFIG.get('decalRoot', '') and (saved.get('root') == APP.CONFIG['root']) and (saved.get('normalRoot', '') == APP.CONFIG.get('normalRoot', '')) and (saved.get('blenderRoots', []) == APP.CONFIG.get('blenderRoots', [])) and (saved.get('materialSaveRoot', '') == APP.CONFIG.get('materialSaveRoot', '')):
         APP.INDEX = saved
         APP.ASSETS = {a['id']: a for a in APP.INDEX['assets']}
     else:
         scan()
     print(f'Surface Studio http://127.0.0.1:{APP.PORT} | {len(APP.ASSETS)} materials', flush=True)
+    start_preview_cache()
     ThreadingHTTPServer(('127.0.0.1', APP.PORT), Handler).serve_forever()
 

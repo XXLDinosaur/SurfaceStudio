@@ -64,7 +64,7 @@ import { app as ctx } from "./modules/runtime.js";
     const id = assetAt(e.target);
     if (id) {
       const area = e.target.closest(".card-image,#detail-preview");
-      if (area) area.title = "拖到 SketchUp 或 Blender 模型上";
+      if (area) area.title = ctx.byId.get(id)?.kind === "hdr" ? "拖到 Blender 视口应用 HDR 环境" : "拖到 SketchUp 或 Blender 模型上";
     }
   });
   document.addEventListener("pointerdown", (e) => {

@@ -16,3 +16,13 @@
 #normal-root {
   margin-top: 4px;
 }
+.asset-card.hdr-asset .card-image > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 0;
+  filter: none;
+}
+.detail-preview.hdr-preview {
+  aspect-ratio: 2 / 1;
+}

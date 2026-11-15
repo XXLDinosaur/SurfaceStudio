@@ -15,8 +15,11 @@ export function createUi(ctx) {
     );
   }
   function imageURL(a, file = a.preview, size = 480) {
-    if (/\.exr$/i.test(file)) return "/normal-exr.svg";
-    return `/api/image?id=${encodeURIComponent(a.id)}&file=${encodeURIComponent(file)}&size=${size}&v=3-${ctx.library?.scannedAt || 0}`;
+    if (a.kind !== "hdr" && /\.exr$/i.test(file)) return "/normal-exr.svg";
+    const revision = a.kind === "hdr"
+      ? a.previewRevision || `${a.modified || 0}-${a.bytes || 0}`
+      : ctx.library?.scannedAt || 0;
+    return `/api/image?id=${encodeURIComponent(a.id)}&file=${encodeURIComponent(file)}&size=${size}&v=4-${revision}`;
   }
   function fileURL(a, file) {
     return `/api/file?id=${encodeURIComponent(a.id)}&file=${encodeURIComponent(file)}`;

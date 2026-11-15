@@ -9,6 +9,15 @@ import installer_core as core
 
 
 class InstallerTests(unittest.TestCase):
+    def test_blender_53_release_supported_but_alpha_not_automatic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executable=Path(directory)/'blender.exe';executable.touch()
+            info={'version':[5,3,0],'version_string':'5.3.0','cycle':'release','scripts':directory,'config':directory}
+            with patch.object(core,'worker',return_value=info):
+                self.assertTrue(core.probe(executable,'installer_blender.py')['supported'])
+            with patch.object(core,'worker',return_value={**info,'cycle':'alpha'}):
+                self.assertFalse(core.probe(executable,'installer_blender.py')['supported'])
+
     def test_application_upgrade_preserves_data_and_backs_up_exe(self):
         with tempfile.TemporaryDirectory() as temp, patch.object(core, 'processes', return_value=[]):
             root = Path(temp); payload = root/'payload'; dest = root/'SS 中文'

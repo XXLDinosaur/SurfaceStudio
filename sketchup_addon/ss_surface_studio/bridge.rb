@@ -22,7 +22,7 @@ module SSSurfaceStudio
     index = JSON.parse(File.read(File.join(dir, 'index.json'), encoding: 'UTF-8'))
     asset = index.fetch('assets').find { |a| a['id'] == id }
     raise '素材已变更，请重新选择。' unless asset
-    raise '请选择 PBR 材质或纯法线素材。' if %w[blend decal].include?(asset['kind'])
+    raise 'SketchUp 不支持 HDR 环境、Blender 原生材质或贴花。' if %w[blend decal hdr].include?(asset['kind'])
     model = Sketchup.active_model
     targets = model.selection.select { |e| e.is_a?(Sketchup::Face) || e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance) }
     raise '请先在模型中选择面、组或组件。' if targets.empty?
@@ -125,7 +125,7 @@ module SSSurfaceStudio
     begin
       raise '拖放已过期' if drop.fetch('expires') < Time.now.to_f
       asset = drop.fetch('material')
-      raise 'SketchUp 暂支持 PBR 材质和法线' if %w[blend decal].include?(asset['kind'])
+      raise 'SketchUp 暂支持 PBR 材质和法线' if %w[blend decal hdr].include?(asset['kind'])
       model = Sketchup.active_model
       view = model.active_view
       x, y, width, height = request.fetch('point')

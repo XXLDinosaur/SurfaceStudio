@@ -2,9 +2,65 @@
 
 # Surface Studio
 
-**本地贴图与 PBR 材质管理器，连接 SketchUp 与 Blender 创作工作流。**
+**Windows 本地材质与 HDR 环境管理器，连接 Blender 和 SketchUp。无需账号，不上传你的素材。**
 
-Surface Studio（SS）是一款 Windows 桌面工具，读取已有材质文件夹，提供预览、搜索、分类、收藏和对比，并通过配套 Blender 插件给模型或选中的面赋材质。青灰磨砂玻璃界面、一体化无边框窗口，无需登录账号或上传素材。
+## 1.8.0 · HDR 环境、场景分组与预览缓存
+
+[下载 Windows 安装器](https://github.com/XXLDinosaur/SurfaceStudio/releases/download/v1.8.0/SurfaceStudio-Setup.exe) · [软件、插件及校验文件](https://github.com/XXLDinosaur/SurfaceStudio/releases/tag/v1.8.0)
+
+SS **1.8.0**，Blender 插件 **1.4.0**，SketchUp 插件 **0.2.1**。本版新增 HDR 环境、自动分组和缓存功能。
+
+### ① 安装软件和连接插件
+
+下载并运行 `SurfaceStudio-Setup.exe`，选择原 SS 安装目录，勾选需要连接的 Blender / SketchUp 版本，点击安装。更新前保存并关闭接收软件，退出 SS 后台；安装器保留 `data` 并备份旧程序、插件和 Blender 偏好设置。安装完成后重新打开软件。
+
+安装器内含软件和两款连接插件，不需要另装 Python。也可单独下载 `surface_studio_bridge.zip`，通过 Blender 偏好设置安装并启用，在插件设置中指定 `Surface Studio.exe`；SU 使用 `SurfaceStudio-SketchUp.rbz`。完整步骤见 [安装说明](INSTALLER.md)。
+
+### ② 指定 HDR 所在的文件夹
+
+打开左下角 **材质库设置 → HDR 环境图库**，填写 `.hdr` / `.exr` 全景图目录，点击 **保存并重新扫描**。包含子目录；每个文件独立入库，同一环境的不同格式和分辨率不会自动合并。原图不搬动、不转换覆盖。
+
+![SS 的 HDR 图库设置；截图来自隔离配置下的真实页面](docs/images/v1.8.0/hdr-settings.png)
+
+截图中的本机目录仅作演示，软件不会把这个位置设为所有用户的默认路径。HDR 图库须与普通材质、贴图、法线和贴花目录分开，避免将 EXR 颜色/法线通道误当作环境。
+
+### ③ 在 HDR 分类预览、搜索和选择
+
+点击侧栏 **HDR**，从全景缩略图挑选环境。展开 HDR 后，可按名称自动归入天空、室内、摄影棚、街道与城市、森林与公园、海边与水域、山地与岩石等分组。手动分类优先保留；只有地点名或无法识别的名称进入“其他环境”。后续新增文件并重新扫描时，同一套本地中英文规则继续生效。
+
+![HDR 卡片的真实测试页面；这张早期 1.8.0 截图展示全景预览，最新版本另有可展开场景分组](docs/images/v1.8.0/hdr-grid.png)
+
+图中 3988 是隔离测试目录包含多个格式/分辨率的文件数，不是固定数量要求。缩略图经过亮度映射，用于挑选；Blender 使用原始高动态范围图片。
+
+### ④ 拖入 Blender，直接作为渲染环境
+
+按住 **HDR 卡片预览图**，拖进 Blender **3D 视口**后松开，模型上或空白处都能接收，无需选中模型。也可以单击卡片进入详情，从大预览图拖出。
+
+![HDR 详情的真实测试页面，说明环境图应用位置和文件信息](docs/images/v1.8.0/hdr-detail.png)
+
+插件为当前场景建立独立 World：环境纹理连接背景，再连接世界输出，默认强度 1。落点视口启用场景世界；正式 Cycles / Eevee 渲染也使用此 HDR。按 **Ctrl+Z** 撤销，Ctrl+Shift+Z 重做。原 World 节点、模型材质和共享旧 World 的其他场景保留。
+
+下面是**真实 Blender 5.2 Cycles 渲染输出**，均为独立测试立方体，已移除局部灯光。左图环境强度为 0，后两图应用不同 HDR；这些是渲染图，不是伪造的 Blender 界面截图。
+
+| 环境关闭 | 纯天空 HDR | 室外环境 EXR |
+| --- | --- | --- |
+| ![环境强度0，模型无环境照明](docs/images/v1.8.0/environment-off.png) | ![天空 HDR 照亮模型](docs/images/v1.8.0/environment-sky.png) | ![室外 EXR 作为世界环境](docs/images/v1.8.0/environment-outdoor.png) |
+
+HDR 仅支持 Blender，拖到 SketchUp 会提示不支持。软件不更换渲染引擎、相机或透明背景设置；Workbench 不提供这种世界环境照明。环境文件不自动打包进 blend，移动工程前请在 Blender 打包外部资源或同时保留原图路径。详见 [HDR 使用指南](docs/hdr.md)。
+
+### ⑤ 预览缓存与后续入库
+
+启动和扫描后，软件在后台逐步准备 HDR 卡片缓存，前台查看优先。常用尺寸共享底图，同一原图的并发请求合并。缓存写入 `data/thumbnails`，切分类与重启后继续复用；原图修改时间或大小变化时更新缓存。新文件及首次放大的大尺寸预览仍需准备。
+
+本机 997 张 HDR 卡片预缓存完成，HDR 缓存约 99.6 MB；三张抽测图片的首次缓存 HTTP 请求约 3–4 ms。数据来自该机器及该次测试，不代表其他硬盘、素材尺寸或机器的固定性能。
+
+### Blender 兼容验证
+
+本轮覆盖 Blender **4.2–5.3** 八个主次版本。安装/自动启用/独立重启、修复、回滚、PBR、原生材质、拖放接收、贴花曲面与边缘回归，以及 HDR/EXR 的 World、撤销/重做和 Cycles/Eevee 渲染逐版本验证。具体补丁版本与结果见 [1.8.0 测试记录](docs/blender-1.8.0-validation.md)。
+
+测试采用工厂场景、临时配置和脚本/API，没有修改用户工程。**本轮未逐版本执行真实鼠标跨窗口拖放手势**；文件接收测试和渲染测试不等同于完整手势验收，也不保证所有复杂贴花曲面均无问题。
+
+其他功能：普通 PBR、单张贴图、纯法线、原生 Blender 材质、独立贴花、收藏、中文分类、批量整理与备份。历史图文指南保留如下。
 
 ## 1.7.2 · 支持 SketchUp 2023 / 2024
 
@@ -145,13 +201,13 @@ SS 1.5.0 / 插件 1.2.2 新增“添加到 SS”：直接保存到 SS 设置的�
 
 从 **[Releases](https://github.com/XXLDinosaur/SurfaceStudio/releases/latest)** 下载 **SurfaceStudio-Setup.exe**。GitHub 的 Download ZIP 是源码，不是安装包。
 
-合集包含 **SS 1.6.0 自动安装器、Blender 连接插件 1.3.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
+合集包含 **SS 1.8.0 自动安装器、Blender 连接插件 1.4.0、中文安装说明与更新说明**。无需单独安装 Python；材质贴图由使用者自行准备。
 
 1. 完整解压合集，运行 `SurfaceStudio-Setup.exe`。
 2. 选择 SS 安装目录，勾选检测到的 Blender 版本。安装器会安装并启用配套插件、配置 SS 路径。
 3. 打开 SS，在 **材质库设置** 中选择包含材质子文件夹的根目录并扫描。导入前请阅读 **[目录层级与格式说明](docs/import-materials.md)**，避免选错目录后扫描为 0。
 
-要求 Windows 10 / 11 x64 和 Microsoft Edge WebView2 Runtime。自动安装支持已验证的 Blender **4.2、4.3、4.4、4.5 LTS、5.0、5.1、5.2 正式版系列**；自定义或便携安装可手动选择 `blender.exe`。其他版本暂不自动安装。WebView2 可从 [Microsoft 官方页面](https://developer.microsoft.com/microsoft-edge/webview2/) 获取。
+要求 Windows 10 / 11 x64 和 Microsoft Edge WebView2 Runtime。自动安装支持已验证的 Blender **4.2、4.3、4.4、4.5 LTS、5.0、5.1、5.2、5.3 正式版系列**；自定义或便携安装可手动选择 `blender.exe`。其他版本暂不自动安装。WebView2 可从 [Microsoft 官方页面](https://developer.microsoft.com/microsoft-edge/webview2/) 获取。
 
 **已有用户更新**：先关闭 Blender，并退出旧 SS 后台进程，再运行安装器，选择原 SS 目录。保留 `data` 文件夹；安装器会保留数据并备份旧程序和插件设置。详见 [安装说明](INSTALLER.md)。
 
@@ -249,7 +305,7 @@ Windows 桌面客户端和配套 Blender 插件都需要更新。启用插件并
 
 目标赋予、撤销及视口射线检测有自动化测试；完整的跨窗口鼠标手势已通过 Blender 4.2.4 LTS 用户手动验收，详见 [拖拽验证记录](DRAG-DROP.md)。GitHub 旧版便携包不会自动升级。
 
-安装与插件功能已在 Blender 4.2.4、4.2.9、4.3.0、4.4.3、4.5.15 LTS、5.0.1、5.1.2、5.2.0 验证。完整跨窗口拖放由用户在 4.2.4 LTS 手动验收；其他版本尚未逐一手测完整鼠标操作。以下为不使用自动安装器时的手动安装方法。
+安装与插件功能已在 Blender 4.2.4、4.2.9、4.3.0、4.4.3、4.5.15 LTS、5.0.1、5.1.2、5.2.0、5.3.0 验证（本轮范围见上方测试记录）。完整跨窗口拖放由用户在 4.2.4 LTS 手动验收；其他版本尚未逐一手测完整鼠标操作。以下为不使用自动安装器时的手动安装方法。
 
 1. 从 Release 下载 `surface_studio_bridge.zip`。
 2. Blender → 编辑 → 偏好设置 → 插件 → 从磁盘安装，选择 ZIP 并启用。

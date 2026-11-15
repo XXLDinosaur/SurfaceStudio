@@ -103,6 +103,9 @@ class WindowControls:
         if result.get('error'): raise RuntimeError(result['error'])
         if release:
             import os, json, time
+            task = json.loads(path.read_text(encoding="utf-8"))
+            if task.get("material", {}).get("kind") == "hdr":
+                raise ValueError("HDR 环境仅支持拖到 Blender 视口")
             _, pid, coords = release[-1]
             inbox = Path(os.environ['LOCALAPPDATA'])/'SurfaceStudio'/'sketchup'/str(pid)
             ready = inbox/'ready'
@@ -192,7 +195,7 @@ def run_primary(instance):
     import service_discovery
     import server
     saved=server.read_json(server.DATA/'index.json',None)
-    if saved and saved.get('textureRoot','') == server.CONFIG.get('textureRoot','') and saved.get('decalRoot','')==server.CONFIG.get('decalRoot','') and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==server.CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==server.CONFIG.get('materialSaveRoot',''):
+    if saved and saved.get('hdrRoot','') == server.CONFIG.get('hdrRoot','') and saved.get('textureRoot','') == server.CONFIG.get('textureRoot','') and saved.get('decalRoot','')==server.CONFIG.get('decalRoot','') and saved.get('root')==server.CONFIG['root'] and saved.get('normalRoot','')==server.CONFIG.get('normalRoot','') and saved.get('blenderRoots',[])==server.CONFIG.get('blenderRoots',[]) and saved.get('materialSaveRoot','')==server.CONFIG.get('materialSaveRoot',''):
         server.INDEX=saved
         server.ASSETS={a['id']:a for a in saved['assets']}
     else: server.scan()
@@ -202,9 +205,11 @@ def run_primary(instance):
     service_discovery.publish(server.DATA,server.PORT,server.TOKEN)
     # Hiding the desktop keeps the bridge alive; exiting its GUI releases ownership.
     threading.Thread(target=http.serve_forever,daemon=True).start()
+    server.start_preview_cache()
     try:
         open_window(instance)
     finally:
+        server.HDR_PREVIEWS.cancel()
         service_discovery.clear(server.DATA,server.TOKEN)
         http.shutdown()
         http.server_close()

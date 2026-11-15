@@ -34,7 +34,7 @@ export function createNavigation(ctx) {
         const children = ctx.library.categories.filter(
           (c) =>
             c.id !== "Uncategorized" &&
-            (counts.has(c.id) || c.id.startsWith("custom-")),
+            counts.has(c.id),
         );
         children.sort(
           (a, b) =>

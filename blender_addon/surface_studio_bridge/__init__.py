@@ -1,7 +1,7 @@
 bl_info = {
     'name': 'Surface Studio — 本地材质库',
     'author': 'Surface Studio',
-    'version': (1, 3, 1),
+    'version': (1, 4, 0),
     'blender': (4, 2, 0),
     'location': '3D Viewport > Sidebar > Surface Studio',
     'description': '打开 Surface Studio，将本地 PBR 材质一键赋予选中模型或选中的面',
@@ -24,6 +24,7 @@ from bpy.props import StringProperty
 from bpy.types import AddonPreferences, Operator, Panel, FileHandler
 from bpy.app.handlers import persistent
 from .native_material import import_material
+from .hdr import apply_environment
 from .export_operator import SURFACESTUDIO_OT_export
 
 DEFAULT_EXE = str(Path.home() / 'SurfaceStudio' / 'Surface Studio.exe')
@@ -412,12 +413,14 @@ def read_drop(filename):
     if path.stat().st_size > 1024 * 1024:
         raise ValueError('无效的拖拽数据')
     data = read_json(path)
-    if not isinstance(data, dict) or data.get('app') != 'SurfaceStudio' or data.get('protocol') not in (1,2) or data.get('id') != path.stem:
+    if not isinstance(data, dict) or data.get('app') != 'SurfaceStudio' or data.get('protocol') not in (1,2,3) or data.get('id') != path.stem:
         raise ValueError('无法识别的 Surface Studio 拖拽文件')
     if not isinstance(data.get('expires'), (int, float)) or not time.time() < data['expires'] <= time.time()+301:
         raise ValueError('拖拽已过期，请从 SS 重新拖出材质')
     if not isinstance(data.get('material'), dict) or not isinstance(data.get('options'), dict):
         raise ValueError('拖拽材质缺少有效数据')
+    if (data.get('protocol') == 3) != (data['material'].get('kind') == 'hdr'):
+        raise ValueError('HDR 拖放协议不匹配，请更新 SS 和 Blender 插件')
     return path, data
 
 
@@ -458,6 +461,13 @@ class SURFACESTUDIO_OT_drop(Operator):
         return bool(context.area and context.area.type == 'VIEW_3D' and context.region and context.region.type == 'WINDOW')
 
     def invoke(self, context, event):
+        try:
+            _, data = read_drop(self.filepath)
+            if data['material'].get('kind') == 'hdr':
+                self.target_name = ''
+                return self.execute(context)
+        except (ValueError, OSError):
+            return self.execute(context)
         hit = mesh_at_drop(context, event.mouse_x, event.mouse_y, surface=True)
         target=hit[0] if hit else None
         self._surface_hit=hit
@@ -474,11 +484,14 @@ class SURFACESTUDIO_OT_drop(Operator):
             previous = read_json(result_path)
             if previous and previous.get('status') in ('success', 'applying'):
                 raise ValueError('这次拖拽已经处理，请从 SS 重新拖出材质')
+            is_hdr = data['material'].get('kind') == 'hdr'
             target = context.view_layer.objects.get(self.target_name)
-            if not target: raise ValueError('未命中可编辑网格；请把材质球拖到模型表面')
+            if not target and not is_hdr: raise ValueError('未命中可编辑网格；请把材质球拖到模型表面')
             if BUSY: raise ValueError('Blender 正在处理另一个材质，请稍后再拖拽')
             atomic_json(result_path, {'id': path.stem, 'status': 'applying', 'updated': time.time(), 'message': '正在赋予拖拽材质…'})
-            if data['material'].get('kind')=='decal':
+            if is_hdr:
+                result = apply_environment(context, data['material'])
+            elif data['material'].get('kind')=='decal':
                 hit=getattr(self,'_surface_hit',None)
                 if not hit or hit[0]!=target: raise ValueError('请重新拖到模型表面')
                 validate_job(data,target)
@@ -486,7 +499,7 @@ class SURFACESTUDIO_OT_drop(Operator):
                 result=place(context,target,hit[1],hit[2],data['material'],build_material,data['options'])
             else:
                 result = apply_job(context, data, target=target)
-            if data['material'].get('kind')!='decal':
+            if not is_hdr and data['material'].get('kind')!='decal':
                 result['message'] = f'已将 {data["material"]["name"]} 赋予 {target.name} · Ctrl+Z 可撤销'
             elif context.space_data.shading.type in ('SOLID','WIREFRAME'):
                 context.space_data.shading.type='MATERIAL'

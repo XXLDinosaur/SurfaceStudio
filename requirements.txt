@@ -1,3 +1,5 @@
 Pillow>=11.0,<13
 pywebview==6.2.1
 cryptography>=50.0.2,<51
+OpenImageIO==3.2.2.0
+numpy>=2.0,<3

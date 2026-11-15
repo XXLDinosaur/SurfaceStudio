@@ -362,6 +362,7 @@ const assetTypeNames = {
   texture: "贴图",
   normal: "法线",
   decal: "贴花",
+  hdr: "HDR",
 };
 
 let library,

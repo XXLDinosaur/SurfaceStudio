@@ -1,5 +1,6 @@
 """Offline Chinese category labels derived from asset names; no file mutations."""
 import re
+from hdr_categories import classify_hdr
 
 RULES = [
     ('DrainCover','井盖',r'drain.?cover|manhole|井盖'),
@@ -38,12 +39,14 @@ RULES = [
 LABELS={key:label for key,label,_ in RULES}
 
 def asset_group(asset):
+    if asset.get('kind')=='hdr':return 'hdr'
     if asset.get('kind')=='decal':return 'decal'
     if asset.get('kind')=='normal' or asset.get('normalOnly'):return 'normal'
     if asset.get('kind')=='image':return 'texture'
     return 'material'
 
 def automatic_category(asset):
+    if asset.get('kind')=='hdr':return classify_hdr(asset.get('name',''))
     # Native exports deliberately enter Uncategorized until the user sorts them.
     if asset.get('kind')=='blend':return asset['category']
     name=str(asset.get('name','')).lower()
