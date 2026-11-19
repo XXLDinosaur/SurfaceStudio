@@ -10,6 +10,7 @@ from blender_bridge import BlenderBridge
 import organizer
 import material_names
 import asset_categories
+import import_review
 from release_notes import NOTES
 from normal_library import scan_normals
 from hdr_library import scan_hdrs, hdr_thumbnail, validate_hdr_root
@@ -112,7 +113,7 @@ def categorized_library():
     counts = Counter((a['category'] for a in items))
     categories = [{'id': k, 'name': catalog[k], 'count': counts[k]} for k in dict.fromkeys([*counts, 'Uncategorized', *edits['custom']])]
     categories.sort(key=lambda c: (c['id'] != 'Uncategorized', -c['count']))
-    return {**APP.INDEX, 'assets': items, 'categories': categories, 'materialSaveRoot': APP.CONFIG.get('materialSaveRoot', ''), 'effectiveMaterialSaveRoot': APP.CONFIG.get('materialSaveRoot') or APP.CONFIG['root'], 'categoryOptions': [{'id': k, 'name': v} for k, v in catalog.items() if k != 'Blender']}
+    return {**APP.INDEX, 'importReview': import_review.summary(APP.INDEX.get('importReview'), items), 'assets': items, 'categories': categories, 'materialSaveRoot': APP.CONFIG.get('materialSaveRoot', ''), 'effectiveMaterialSaveRoot': APP.CONFIG.get('materialSaveRoot') or APP.CONFIG['root'], 'categoryOptions': [{'id': k, 'name': v} for k, v in catalog.items() if k != 'Blender']}
 
 def edit_category(body):
     data, key, edits = category_data()
@@ -168,6 +169,7 @@ def scan():
         if not root.is_dir():
             raise ValueError('材质库路径不存在或无法读取')
         result, warnings = ([], [])
+        review = import_review.new_report()
         normal_root = configuration.get('normalRoot', '')
         reserved = {Path(value).resolve() for value in (normal_root, configuration.get('decalRoot'), configuration.get('textureRoot'), configuration.get('hdrRoot')) if value}
         for directory, dirs, names in os.walk(root, followlinks=False):
@@ -184,6 +186,9 @@ def scan():
                 image_files = [f for f in files if f.suffix.lower() in ('.jpg', '.jpeg', '.png', '.exr', '.tif', '.tiff')]
                 if not image_files:
                     continue
+                review['checkedFolders'] += 1
+                if import_review.plant_atlas(meta, folder.name):
+                    review['includedPlantAtlases'] += 1
                 preview = next((f for f in image_files if 'preview' in f.name.lower()), None)
                 maps = []
                 for f in image_files:
@@ -212,7 +217,10 @@ def scan():
                     continue
                 if len(maps) == 1 and maps[0]['channel'] == 'Other':
                     maps[0]['channel'] = 'Albedo'
-                preview = preview or next((f for f in image_files if 'albedo' in f.name.lower()), image_files[0])
+                color_map = next((m['name'] for m in maps if m['channel'] == 'Albedo'), None)
+                if not preview and color_map:
+                    review['colorPreviews'] += 1
+                preview = preview or (folder/color_map if color_map else image_files[0])
                 cat = folder.name.split('_')[0] or 'Other'
                 if cat not in CATEGORIES:
                     cat = 'Other'
@@ -244,6 +252,8 @@ def scan():
         new_index = {'assets': result, 'categories': [{'id': k, 'name': CATEGORIES[k], 'count': v} for k, v in counts.most_common()], 'root': str(root), 'hdrRoot': configuration.get('hdrRoot', ''), 'normalRoot': normal_root, 'textureRoot': configuration.get('textureRoot', ''), 'decalRoot': configuration.get('decalRoot', ''), 'blenderRoots': configuration.get('blenderRoots', []), 'materialSaveRoot': configuration.get('materialSaveRoot', ''), 'scannedAt': time.time(), 'totalBytes': sum((a['bytes'] for a in result)), 'warnings': warnings}
         with APP.LOCK:
             if configuration == APP.CONFIG:
+                review['reviewedAt'] = new_index['scannedAt']
+                new_index['importReview'] = review
                 save_json(APP.DATA / 'index.json', new_index)
                 APP.INDEX = new_index
                 APP.ASSETS = {a['id']: a for a in result}

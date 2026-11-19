@@ -205,6 +205,8 @@ def run_primary(instance):
     service_discovery.publish(server.DATA,server.PORT,server.TOKEN)
     # Hiding the desktop keeps the bridge alive; exiting its GUI releases ownership.
     threading.Thread(target=http.serve_forever,daemon=True).start()
+    if server.import_review.needs_review(server.INDEX):
+        threading.Thread(target=server.scan,daemon=True).start()
     server.start_preview_cache()
     try:
         open_window(instance)
